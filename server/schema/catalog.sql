@@ -2,7 +2,7 @@ CREATE TYPE event AS ENUM ('guest speaker', 'study-trip', 'workshop');
 CREATE TYPE subject AS ENUM ('life skills', 'science', 'technology', 'engineering', 'math', 'college readiness');
 CREATE TYPE year AS ENUM ('junior', 'senior', 'both');
 
-DROP TABLE catalog IF EXISTS;
+DROP TABLE IF EXISTS catalog;
 CREATE TABLE catalog (
   id VARCHAR(10) PRIMARY KEY,
   host VARCHAR(50) NOT NULL,
