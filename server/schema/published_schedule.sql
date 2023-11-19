@@ -1,8 +1,8 @@
-DROP TABLE [IF EXISTS] published_schedule;
+DROP TABLE IF EXISTS published_schedule;
 
 CREATE TYPE year AS ENUM ('Junior','Senior');
 
-CREATE TABLE [IF NOT EXISTS] published_schedule (
+CREATE TABLE IF NOT EXISTS published_schedule (
     id varchar(10) NOT NULL,
     event_id varchar(10) NOT NULL,
     confirmed boolean NOT NULL,
