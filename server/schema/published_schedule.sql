@@ -9,7 +9,7 @@ CREATE TABLE [IF NOT EXISTS] published_schedule (
     confirmed_on DATETIME NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
-    cohort ENUM NOT NULL,
+    cohort year NOT NULL,
     notes varchar(100),
     FOREIGN KEY (event_id)
         REFERENCES catalog (id)
