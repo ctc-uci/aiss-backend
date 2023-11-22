@@ -7,6 +7,8 @@ permissions: read-all
 
 jobs:
   eslint:  
+    env:
+      REVIEWDOG_GITHUB_API_TOKEN: $${{ secret.sCTC_DEVOPS_ORG_PAT }}
     runs-on: ubuntu-latest
     steps:    
       - uses: actions/checkout@v2
