@@ -14,16 +14,16 @@ WHERE
 
 -- GET - Returns all data from the Users table
 SELECT * FROM
-    Users;
+    users;
 
 -- GET/pending-accounts - Returns all data from Users table who are currently pending approval
 SELECT * FROM
-    Users
+    users
 WHERE
-    approved = false;
+    approved = FALSE;
 
 -- POST - Adds a new row into Users table
 INSERT INTO
-    Users (id, email, "type", approved)
+    users (id, email, "type", approved)
 VALUES
     (?,?,?,?);
