@@ -13,6 +13,9 @@ app.use(
   }),
 );
 
+// add all routes under here
+app.use(express.json()); // for req.body
+
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });
