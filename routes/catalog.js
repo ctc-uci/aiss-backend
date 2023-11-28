@@ -44,7 +44,7 @@ catalogRouter.post('/', async (req, res) => {
 // UPDATE catalog
 // SET host = ?, title = ?, event_type = ?, subject = ?, description = ?, year = ?
 // WHERE id = ?;
-catalogRouter.put('/', async (req, res) => {
+catalogRouter.put('/:id', async (req, res) => {
     try {
       const allUsers = await db.query(`SELECT * from catalog;`);
       res.status(200).json(keysToCamel(allUsers));
@@ -57,10 +57,11 @@ catalogRouter.put('/', async (req, res) => {
 
 // -- DELETE - deletes an existing row given an id
 // DELETE FROM catalog WHERE id=?;
-catalogRouter.delete('/', async (req, res) => {
+catalogRouter.delete('/:id', async (req, res) => {
     try {
-      const delUser = await db.query(`DELETE FROM catalog WHERE id = ${id};`);
-      res.status(200).json(keysToCamel(delUser));
+        const { id } = req.params;
+        const delUser = await db.query(`DELETE FROM catalog WHERE id = $1;`,[id],);
+        res.status(200).json(keysToCamel(delUser));
     } catch (err) {
       console.log(err);
       res.status(500).send(err.message);
