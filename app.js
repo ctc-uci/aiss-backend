@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const publishedScheduleRouter = require('./routes/publishedSchedule');
 
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ app.use(
 
 // add all routes under here
 app.use(express.json()); // for req.body
+app.use('/published-schedule', publishedScheduleRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
