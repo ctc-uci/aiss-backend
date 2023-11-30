@@ -1,8 +1,33 @@
 /*GET - Returns all data from the published_schedule table*/
-SELECT * FROM published_schedule;
+SELECT
+   PS.id,
+   C.host,
+   C.title,
+   PS.confirmed,
+   PS.confirmed_on,
+   PS.start_time,
+   PS.end_time,
+   PS.cohort,
+   PS.notes
+FROM
+   published_schedule PS
+   LEFT JOIN catalog C ON PS.event_id = C.id;
 
 /*GET/:id - returns the rows that match the given id*/
-SELECT * FROM published_schedule WHERE id = ?;
+SELECT
+   PS.id,
+   C.host,
+   C.title,
+   PS.confirmed,
+   PS.confirmed_on,
+   PS.start_time,
+   PS.end_time,
+   PS.cohort,
+   PS.notes
+FROM
+   published_schedule PS
+   LEFT JOIN catalog C ON PS.event_id = C.id
+   AND PS.id = ?;
 
 /*POST - Adds a new row to the published_schedule table
 Note: Confirmed should be defaulted to true*/
