@@ -1,15 +1,15 @@
 const express = require('express');
 
-const db = require('../server/db');
+const { db } = require('../server/db');
 
 const catalogRouter = express.Router();
-const { toCamel } = require('../common/utils');
+const { keysToCamel } = require('../common/utils');
 
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
     const allInfo = await db.query(`SELECT * from catalog;`);
-    res.status(200).json(toCamel(allInfo));
+    res.status(200).json(keysToCamel(allInfo));
   } catch (err) {
     console.log(err);
     res.status(500).send(err.message);
@@ -22,7 +22,7 @@ catalogRouter.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1;`, [id]);
-    res.status(200).json(toCamel(allUsers));
+    res.status(200).json(keysToCamel(allUsers));
   } catch (err) {
     console.log(err);
     res.status(500).send(err.message);
@@ -62,11 +62,27 @@ catalogRouter.put('/:id', async (req, res) => {
     const { host, title, eventType, subject, description, year } = req.body;
 
     const updatedCatalog = await db.query(
-      `UPDATE catalog SET host = $1, title = $2, event_type = $3, subject = $4,
-                                     description = $5, year = $6 WHERE id = $7;`,
-      [host, title, eventType, subject, description, year, id],
+      `UPDATE catalog SET 
+       ${host ? 'host = $(host), ' : ''}
+       ${title ? 'title = $(title),' : ''}
+       ${eventType ? 'event_type = $(eventType), ' : ''}
+       ${subject ? 'subject = $(subject), ' : ''}
+       ${description ? 'description = $(description), ' : ''}
+       ${year ? 'year = $(year), ' : ''}
+       id = '${id}'
+        WHERE id = '${id}' 
+        RETURNING *;`,
+      {
+        host,
+        title,
+        eventType,
+        subject,
+        description,
+        year,
+        id,
+      },
     );
-    res.status(200).send(updatedCatalog.rows[0]);
+    res.status(200).send(keysToCamel(updatedCatalog));
   } catch (err) {
     console.log(err);
     res.status(500).send(err.message);
@@ -78,8 +94,8 @@ catalogRouter.put('/:id', async (req, res) => {
 catalogRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const delUser = await db.query(`DELETE FROM catalog WHERE id = $1;`, [id]);
-    res.status(200).json(toCamel(delUser));
+    const delUser = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
+    res.status(200).send(keysToCamel(delUser));
   } catch (err) {
     console.log(err);
     res.status(500).send(err.message);
