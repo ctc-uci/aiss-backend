@@ -98,9 +98,20 @@ publishedScheduleRouter.post('/', async (req, res) => {
 
 // PUT/:id - Updates an existing row given an id
 publishedScheduleRouter.put('/id', async (req, res) => {
+
   try {
-    const allPublishedSchedules = await db.query(
+    const { id } = req.params;
+    const {
+      event_id: eventId,
+      confirmed_on: confirmedOn,
+      start_time: startTime,
+      end_time: endTime,
+      cohort,
+      notes,
+    } = req.body;
+    const updatedPublishedSchedule = await db.query(
       `
+      UPDATE published_schedule
       SET
         event_id = COALESCE(?, event_id),
         confirmed = COALESCE(?, confirmed),
@@ -113,7 +124,7 @@ publishedScheduleRouter.put('/id', async (req, res) => {
       `,
       [id, eventId, confirmedOn, startTime, endTime, cohort, notes],
     );
-    res.status(200).json(keysToCamel(allPublishedSchedules));
+    res.status(204).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -122,13 +133,15 @@ publishedScheduleRouter.put('/id', async (req, res) => {
 // DELETE/:id - deletes an existing row given an id
 publishedScheduleRouter.put('/id', async (req, res) => {
   try {
-    const allPublishedSchedules = await db.query(
+    const { id } = req.params;
+    await db.query(
       `
       DELETE FROM published_schedule
       WHERE id = ?;
       `,
+      [id]
     );
-    res.status(200).json(keysToCamel(allPublishedSchedules));
+    res.status(200).send('Deleted row from Published Schedule');
   } catch (err) {
     res.status(500).send(err.message);
   }
