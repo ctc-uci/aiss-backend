@@ -97,12 +97,13 @@ publishedScheduleRouter.post('/', async (req, res) => {
 });
 
 // PUT/:id - Updates an existing row given an id
-publishedScheduleRouter.put('/id', async (req, res) => {
+publishedScheduleRouter.put('/:id', async (req, res) => {
 
   try {
     const { id } = req.params;
     const {
       event_id: eventId,
+      confirmed,
       confirmed_on: confirmedOn,
       start_time: startTime,
       end_time: endTime,
@@ -113,16 +114,16 @@ publishedScheduleRouter.put('/id', async (req, res) => {
       `
       UPDATE published_schedule
       SET
-        event_id = COALESCE(?, event_id),
-        confirmed = COALESCE(?, confirmed),
-        confirmed_on = COALESCE(?, confirmed_on),
-        start_time = COALESCE(?, start_time),
-        end_time = COALESCE(?, end_time),
-        cohort = COALESCE(?, cohort),
-        notes = COALESCE(?, notes)
-      WHERE id = ?;
+        event_id = COALESCE($1, event_id),
+        confirmed = COALESCE($2, confirmed),
+        confirmed_on = COALESCE($3, confirmed_on),
+        start_time = COALESCE($4, start_time),
+        end_time = COALESCE($5, end_time),
+        cohort = COALESCE($6, cohort),
+        notes = COALESCE($7, notes)
+      WHERE id = $8;
       `,
-      [id, eventId, confirmedOn, startTime, endTime, cohort, notes],
+      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
     );
     res.status(204).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
@@ -137,7 +138,7 @@ publishedScheduleRouter.put('/id', async (req, res) => {
     await db.query(
       `
       DELETE FROM published_schedule
-      WHERE id = ?;
+      WHERE id = $1;
       `,
       [id]
     );
