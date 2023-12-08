@@ -98,7 +98,6 @@ publishedScheduleRouter.post('/', async (req, res) => {
 
 // PUT/:id - Updates an existing row given an id
 publishedScheduleRouter.put('/:id', async (req, res) => {
-
   try {
     const { id } = req.params;
     const {
@@ -132,7 +131,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE/:id - deletes an existing row given an id
-publishedScheduleRouter.put('/id', async (req, res) => {
+publishedScheduleRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     await db.query(
@@ -140,7 +139,7 @@ publishedScheduleRouter.put('/id', async (req, res) => {
       DELETE FROM published_schedule
       WHERE id = $1;
       `,
-      [id]
+      [id],
     );
     res.status(200).send('Deleted row from Published Schedule');
   } catch (err) {
