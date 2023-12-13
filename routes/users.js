@@ -32,7 +32,7 @@ userRouter.post('/', async (req, res) => {
       approved,
     ]);
     res.status(201).json({
-      status: 'Success',
+      id,
     });
   } catch (err) {
     res.status(500).json({
@@ -49,7 +49,7 @@ userRouter.put('/:uid', async (req, res) => {
       `UPDATE users SET approved = TRUE WHERE id = $1 RETURNING *;`,
       [uid],
     );
-    return res.status(200).send(updatedApproval[0]);
+    return res.status(200).send(keysToCamel(updatedApproval));
   } catch (err) {
     return res.status(500).send(err.message);
   }
@@ -58,8 +58,8 @@ userRouter.put('/:uid', async (req, res) => {
 userRouter.delete('/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
-    await db.query(`DELETE FROM users WHERE id = $1;`, [uid]);
-    res.status(200).send('Deleted user');
+    const deletedUser = await db.query(`DELETE FROM users WHERE id = $1 RETURNING *;`, [uid]);
+    res.status(200).send(keysToCamel(deletedUser));
   } catch (err) {
     res.status(500).send(err.message);
   }
