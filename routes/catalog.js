@@ -11,7 +11,6 @@ catalogRouter.get('/', async (req, res) => {
     const allInfo = await db.query(`SELECT * from catalog;`);
     res.status(200).json(keysToCamel(allInfo));
   } catch (err) {
-    console.log(err);
     res.status(500).send(err.message);
   }
 });
@@ -23,7 +22,6 @@ catalogRouter.get('/:id', async (req, res) => {
     const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1;`, [id]);
     res.status(200).json(keysToCamel(allUsers));
   } catch (err) {
-    console.log(err);
     res.status(500).send(err.message);
   }
 });
@@ -78,7 +76,6 @@ catalogRouter.put('/:id', async (req, res) => {
     );
     res.status(200).send(keysToCamel(updatedCatalog));
   } catch (err) {
-    console.log(err);
     res.status(500).send(err.message);
   }
 });
@@ -90,7 +87,6 @@ catalogRouter.delete('/:id', async (req, res) => {
     const delUser = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
     res.status(200).send(keysToCamel(delUser));
   } catch (err) {
-    console.log(err);
     res.status(500).send(err.message);
   }
 });
