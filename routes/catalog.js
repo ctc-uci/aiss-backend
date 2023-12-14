@@ -35,9 +35,7 @@ catalogRouter.post('/', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7);`,
       [id, host, title, eventType, subject, description, year],
     );
-    res.status(201).json({
-      status: 'Success',
-    });
+    res.status(201).json({ id, status: 'Success' });
   } catch (err) {
     res.status(500).json({
       status: 'Failed',
