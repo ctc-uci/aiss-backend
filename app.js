@@ -8,6 +8,8 @@ const users = require('./routes/users');
 
 const app = express();
 
+const catalogRouter = require('./routes/catalog');
+
 const PORT = process.env.PORT || 3001;
 
 app.use(
@@ -19,6 +21,8 @@ app.use(
 // add all routes under here
 app.use(express.json()); // for req.body
 app.use('/users', users);
+
+app.use('/catalog', catalogRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
