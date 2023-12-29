@@ -62,10 +62,11 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 publishedScheduleRouter.post('/', async (req, res) => {
   const {
     id,
-    event_id: eventId,
-    confirmed_on: confirmedOn,
-    start_time: startTime,
-    end_time: endTime,
+    eventId,
+    confirmed,
+    confirmedOn,
+    startTime,
+    endTime,
     cohort,
     notes,
   } = req.body;
@@ -84,12 +85,13 @@ publishedScheduleRouter.post('/', async (req, res) => {
           notes
         )
         VALUES
-          ($1, $2, true, $3, $4, $5, $6, $7);
+          ($1, $2, $3, $4, $5, $6, $7, $8);
       `,
-      [id, eventId, confirmedOn, startTime, endTime, cohort, notes],
+      [id, eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
     );
     res.status(201).json({
       status: 'Success',
+      id: id,  // how should id be returned`
     });
   } catch (err) {
     res.status(500).send(err.message);
@@ -99,13 +101,13 @@ publishedScheduleRouter.post('/', async (req, res) => {
 // PUT/:id - Updates an existing row given an id
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // what does this do?
     const {
-      event_id: eventId,
+      eventId,
       confirmed,
-      confirmed_on: confirmedOn,
-      start_time: startTime,
-      end_time: endTime,
+      confirmedOn,
+      startTime,
+      endTime,
       cohort,
       notes,
     } = req.body;
