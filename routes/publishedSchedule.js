@@ -122,7 +122,9 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         end_time = COALESCE($5, end_time),
         cohort = COALESCE($6, cohort),
         notes = COALESCE($7, notes)
-      WHERE id = $8;
+      WHERE id = $8
+
+      RETURNING *;
       `,
       [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
     );
@@ -135,15 +137,28 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
 // DELETE/:id - deletes an existing row given an id
 publishedScheduleRouter.delete('/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    await db.query(
+      const { id } = req.params;
+      // first select entry to be deleted
+      const selectResult = await db.query(
+        `
+        SELECT * FROM published_schedule
+        WHERE id = $1;
+        `,
+      );
+      const deletedEntry = selectResult.rows[0];
+      //return error if not found
+      if (!deletedEntry) {
+        return res.status(404).send("Entry not found")
+      };
+      //perform deletion
+      await db.query(
       `
       DELETE FROM published_schedule
       WHERE id = $1;
       `,
       [id],
     );
-    res.status(200).send('Deleted row from Published Schedule');
+    res.status(200).send(deletedEntry);
   } catch (err) {
     res.status(500).send(err.message);
   }
