@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const publishedScheduleRouter = require('./routes/publishedSchedule');
 
 require('dotenv').config();
 
@@ -25,10 +26,9 @@ app.use(
 
 // add all routes under here
 app.use(express.json()); // for req.body
+app.use('/published-schedule', publishedScheduleRouter);
 app.use('/users', users);
-
 app.use('/catalog', catalogRouter);
-
 app.use('/nodeMailer', email);
 
 app.listen(PORT, () => {
