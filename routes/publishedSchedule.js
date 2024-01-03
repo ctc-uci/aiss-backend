@@ -33,6 +33,7 @@ publishedScheduleRouter.get('/', async (req, res) => {
 // GET/:id - returns the rows that match the given id
 publishedScheduleRouter.get('/:id', async (req, res) => {
   try {
+    const { id } = req.params;
     const publishedScheduleResult = await db.query(
       `
       SELECT
@@ -48,9 +49,9 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       FROM
         published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
-        AND PS.id = $1;
+      WHERE PS.id = $1;
       `,
-      [req.params.id],
+      [id],
     );
     res.status(200).json(keysToCamel(publishedScheduleResult));
   } catch (err) {
@@ -60,16 +61,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 
 // POST - Adds a new row to the published_schedule table
 publishedScheduleRouter.post('/', async (req, res) => {
-  const {
-    id,
-    eventId,
-    confirmed,
-    confirmedOn,
-    startTime,
-    endTime,
-    cohort,
-    notes,
-  } = req.body;
+  const { id, eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
   try {
     await db.query(
       `
@@ -91,7 +83,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
     );
     res.status(201).json({
       status: 'Success',
-      id: id,  // how should id be returned`
+      id,
     });
   } catch (err) {
     res.status(500).send(err.message);
@@ -101,16 +93,8 @@ publishedScheduleRouter.post('/', async (req, res) => {
 // PUT/:id - Updates an existing row given an id
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
-    const { id } = req.params; // what does this do?
-    const {
-      eventId,
-      confirmed,
-      confirmedOn,
-      startTime,
-      endTime,
-      cohort,
-      notes,
-    } = req.body;
+    const { id } = req.params;
+    const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
     const updatedPublishedSchedule = await db.query(
       `
       UPDATE published_schedule
@@ -128,7 +112,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
       `,
       [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
     );
-    res.status(204).json(keysToCamel(updatedPublishedSchedule));
+    res.status(200).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -137,24 +121,11 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
 // DELETE/:id - deletes an existing row given an id
 publishedScheduleRouter.delete('/:id', async (req, res) => {
   try {
-      const { id } = req.params;
-      // first select entry to be deleted
-      const selectResult = await db.query(
-        `
-        SELECT * FROM published_schedule
-        WHERE id = $1;
-        `,
-      );
-      const deletedEntry = selectResult.rows[0];
-      //return error if not found
-      if (!deletedEntry) {
-        return res.status(404).send("Entry not found")
-      };
-      //perform deletion
-      await db.query(
+    const { id } = req.params;
+    const deletedEntry = await db.query(
       `
       DELETE FROM published_schedule
-      WHERE id = $1;
+      WHERE id = $1 RETURNING *;
       `,
       [id],
     );
