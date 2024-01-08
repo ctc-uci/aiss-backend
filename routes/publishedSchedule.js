@@ -61,9 +61,9 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 
 // POST - Adds a new row to the published_schedule table
 publishedScheduleRouter.post('/', async (req, res) => {
-  const { id, eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
   try {
-    await db.query(
+    const returnedData = await db.query(
       `
       INSERT INTO
         published_schedule (
@@ -77,13 +77,14 @@ publishedScheduleRouter.post('/', async (req, res) => {
           notes
         )
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8);
+          (nextval('published_schedule_id_seq'), $1, $2, $3, $4, $5, $6, $7)
+        RETURNING id;
       `,
-      [id, eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
+      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
     );
     res.status(201).json({
       status: 'Success',
-      id,
+      id: returnedData[0].id,
     });
   } catch (err) {
     res.status(500).send(err.message);
