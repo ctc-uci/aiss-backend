@@ -28,14 +28,15 @@ catalogRouter.get('/:id', async (req, res) => {
 
 // -- POST - Adds a new row to the catalog table
 catalogRouter.post('/', async (req, res) => {
-  const { id, host, title, eventType, subject, description, year } = req.body;
+  const { host, title, eventType, subject, description, year } = req.body;
   try {
-    await db.query(
+    const returnedData = await db.query(
       `INSERT INTO catalog (id, host, title, event_type, subject, description, year)
-      VALUES ($1, $2, $3, $4, $5, $6, $7);`,
-      [id, host, title, eventType, subject, description, year],
+      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6)
+      RETURNING id;`,
+      [host, title, eventType, subject, description, year],
     );
-    res.status(201).json({ id, status: 'Success' });
+    res.status(201).json({ id: returnedData[0].id, status: 'Success' });
   } catch (err) {
     res.status(500).json({
       status: 'Failed',
@@ -52,7 +53,7 @@ catalogRouter.put('/:id', async (req, res) => {
     const { host, title, eventType, subject, description, year } = req.body;
 
     const updatedCatalog = await db.query(
-      `UPDATE catalog SET 
+      `UPDATE catalog SET
        ${host ? 'host = $(host), ' : ''}
        ${title ? 'title = $(title),' : ''}
        ${eventType ? 'event_type = $(eventType), ' : ''}
@@ -60,7 +61,7 @@ catalogRouter.put('/:id', async (req, res) => {
        ${description ? 'description = $(description), ' : ''}
        ${year ? 'year = $(year), ' : ''}
        id = '${id}'
-        WHERE id = '${id}' 
+        WHERE id = '${id}'
         RETURNING *;`,
       {
         host,
