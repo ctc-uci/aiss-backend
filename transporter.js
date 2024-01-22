@@ -3,6 +3,7 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // sender information
+
 const transport = {
   host: 'smtp.gmail.com', // e.g. smtp.gmail.com
   auth: {
