@@ -19,7 +19,6 @@ userRouter.get('/', async (req, res) => {
 userRouter.get('/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
-    console.log('uid', req.params);
     const user = await db.query(`SELECT * FROM users WHERE id = $1;`, [uid]);
     res.status(200).json(keysToCamel(user));
   } catch (err) {

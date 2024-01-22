@@ -30,7 +30,6 @@ const verifyToken = async (req, res, next) => {
 authRouter.get('/verifyToken/:accessToken', async (req, res) => {
   try {
     const { accessToken } = req.params;
-    console.log('accessToken3urju3jrwj!', accessToken);
     const decodedToken = await admin.auth().verifyIdToken(accessToken);
     return res.status(200).send(decodedToken.uid);
   } catch (err) {
