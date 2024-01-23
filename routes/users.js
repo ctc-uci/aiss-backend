@@ -57,7 +57,7 @@ userRouter.post('/create', async (req, res) => {
   }
 });
 
-userRouter.put('/:uid', async (req, res) => {
+userRouter.put('/approve/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
     const updatedApproval = await db.query(
