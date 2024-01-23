@@ -7,6 +7,8 @@ require('dotenv').config();
 // routes
 const users = require('./routes/users');
 
+const { authRouter } = require('./routes/auth');
+
 const email = require('./routes/nodeMailer');
 
 const app = express();
@@ -30,6 +32,7 @@ app.use('/published-schedule', publishedScheduleRouter);
 app.use('/users', users);
 app.use('/catalog', catalogRouter);
 app.use('/nodeMailer', email);
+app.use('/auth', authRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
