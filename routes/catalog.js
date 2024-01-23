@@ -28,13 +28,13 @@ catalogRouter.get('/:id', async (req, res) => {
 
 // -- POST - Adds a new row to the catalog table
 catalogRouter.post('/', async (req, res) => {
-  const { host, title, eventType, subject, description, year } = req.body;
+  const { host, title, eventType, subject, description, year, season, location } = req.body;
   try {
     const returnedData = await db.query(
-      `INSERT INTO catalog (id, host, title, event_type, subject, description, year)
-      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6)
+      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location)
+      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id;`,
-      [host, title, eventType, subject, description, year],
+      [host, title, eventType, subject, description, year, season, location],
     );
     res.status(201).json({ id: returnedData[0].id, status: 'Success' });
   } catch (err) {
@@ -50,7 +50,7 @@ catalogRouter.post('/', async (req, res) => {
 catalogRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { host, title, eventType, subject, description, year } = req.body;
+    const { host, title, eventType, subject, description, year, location, season } = req.body;
 
     const updatedCatalog = await db.query(
       `UPDATE catalog SET
@@ -60,6 +60,8 @@ catalogRouter.put('/:id', async (req, res) => {
        ${subject ? 'subject = $(subject), ' : ''}
        ${description ? 'description = $(description), ' : ''}
        ${year ? 'year = $(year), ' : ''}
+       ${location ? 'location = $(location), ' : ''}
+       ${season ? 'season = $(season), ' : ''}
        id = '${id}'
         WHERE id = '${id}'
         RETURNING *;`,
@@ -71,6 +73,8 @@ catalogRouter.put('/:id', async (req, res) => {
         description,
         year,
         id,
+        location,
+        season,
       },
     );
     res.status(200).send(keysToCamel(updatedCatalog));
