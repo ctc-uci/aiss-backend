@@ -38,7 +38,6 @@ userRouter.get('/pending-accounts', async (req, res) => {
 userRouter.post('/create', async (req, res) => {
   try {
     const { id, email, type, approved } = req.body;
-    // console.log('req.body', req.body);
     await db.query(`INSERT INTO users (id, email, "type", approved) VALUES ($1, $2, $3, $4);`, [
       id,
       email,
