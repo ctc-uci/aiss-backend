@@ -15,21 +15,21 @@ userRouter.get('/', async (req, res) => {
   }
 });
 
+userRouter.get('/pending-accounts', async (req, res) => {
+  try {
+    const pendingAccounts = await db.query(`SELECT * FROM users WHERE approved = FALSE;`);
+    res.status(200).json(keysToCamel(pendingAccounts));
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // logInWithEmailAndPassword() needs to get specific user id
 userRouter.get('/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
     const user = await db.query(`SELECT * FROM users WHERE id = $1;`, [uid]);
     res.status(200).json(keysToCamel(user));
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-userRouter.get('/pending-accounts', async (req, res) => {
-  try {
-    const pendingAccounts = await db.query(`SELECT * FROM users WHERE approved = FALSE;`);
-    res.status(200).json(keysToCamel(pendingAccounts));
   } catch (err) {
     res.status(500).send(err.message);
   }
