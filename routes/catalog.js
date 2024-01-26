@@ -4,7 +4,7 @@ const { db } = require('../server/db');
 
 const catalogRouter = express.Router();
 const { keysToCamel } = require('../common/utils');
-
+// modify /catalog
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
