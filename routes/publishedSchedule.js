@@ -30,6 +30,74 @@ publishedScheduleRouter.get('/', async (req, res) => {
   }
 });
 
+// GET /published-schedule/season - returns rows that match the season
+publishedScheduleRouter.get('/season', async (req, res) => {
+  try {
+    const { year, season } = req.query;
+    const seasonResult = await db.query(
+      `
+      WITH seasonPS AS
+      (
+        SELECT 
+          PS.id,
+          C.title,
+          C.event_type,
+          C.year,
+          PS.start_time,
+          PS.end_time,
+          PS.confirmed,
+          PS.confirmed_on,
+          PS.cohort,
+          PS.notes
+        FROM published_schedule PS
+        LEFT JOIN catalog C ON PS.event_id = C.id
+        WHERE 
+          C.season = $1 AND 
+          EXTRACT(YEAR FROM PS.start_time) = $2
+      )
+      SELECT seasonPS.start_time, JSON_AGG(seasonPS.*) AS data
+      FROM seasonPS
+      GROUP BY start_time
+      ORDER BY start_time ASC;
+      `,
+      [season, year],
+    );
+    res.status(200).json(keysToCamel(seasonResult));
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+// GET /published-schedule/date - returns all events occurring on a specific date
+publishedScheduleRouter.get('/date', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const seasonResult = await db.query(
+      `
+      SELECT 
+        PS.id,
+        C.title,
+        C.event_type,
+        C.year,
+        PS.start_time,
+        PS.end_time,
+        PS.confirmed,
+        PS.confirmed_on,
+        PS.cohort,
+        PS.notes
+      FROM published_schedule PS
+      LEFT JOIN catalog C ON PS.event_id = C.id
+      DATE(PS.start_time) = $1
+      ORDER BY start_time ASC;
+      `,
+      [date],
+    );
+    res.status(200).json(keysToCamel(seasonResult));
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
 // GET/:id - returns the rows that match the given id
 publishedScheduleRouter.get('/:id', async (req, res) => {
   try {
