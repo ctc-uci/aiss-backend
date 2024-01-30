@@ -33,7 +33,7 @@ publishedScheduleRouter.get('/', async (req, res) => {
 // GET /published-schedule/season - returns rows that match the season
 publishedScheduleRouter.get('/season', async (req, res) => {
   try {
-    const { year, season } = req.query;
+    const { season, year } = req.query;
     const seasonResult = await db.query(
       `
       WITH seasonPS AS
@@ -55,10 +55,10 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           C.season = $1 AND 
           EXTRACT(YEAR FROM PS.start_time) = $2
       )
-      SELECT seasonPS.start_time, JSON_AGG(seasonPS.*) AS data
+      SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
       FROM seasonPS
-      GROUP BY start_time
-      ORDER BY start_time ASC;
+      GROUP BY DATE(start_time)
+      ORDER BY DATE(start_time) ASC;
       `,
       [season, year],
     );
