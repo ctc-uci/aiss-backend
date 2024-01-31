@@ -47,6 +47,8 @@ catalogRouter.get('/', async (req, res) => {
       params.push('');
     }
 
+    query += ' ORDER BY title ASC';
+
     const reqInfo = await db.query(query, params);
     res.status(200).json(keysToCamel(reqInfo));
   } catch (err) {
