@@ -13,7 +13,8 @@ catalogRouter.get('/', async (req, res) => {
 
     const offset = (page - 1) * limit;
     const allInfo = await db.query(`SELECT * from catalog LIMIT $1 OFFSET $2;`, [limit, offset]);
-    res.status(200).json(keysToCamel(allInfo));
+    const eventCount = await db.query(`SELECT COUNT(DISTINCT id) from catalog;`);
+    res.status(200).json(keysToCamel({ events: allInfo, count: eventCount }));
   } catch (err) {
     res.status(500).send(err.message);
   }
