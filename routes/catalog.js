@@ -1,14 +1,18 @@
 const express = require('express');
-
 const { db } = require('../server/db');
 
 const catalogRouter = express.Router();
-const { keysToCamel } = require('../common/utils');
+const { keysToCamel, isInteger } = require('../common/utils');
 
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
-    const allInfo = await db.query(`SELECT * from catalog;`);
+    let { limit, page } = req.query;
+    limit = isInteger(limit) ? parseInt(limit, 10) : 10;
+    page = isInteger(page) ? parseInt(page, 10) : 1;
+
+    const offset = (page - 1) * limit;
+    const allInfo = await db.query(`SELECT * from catalog LIMIT $1 OFFSET $2;`, [limit, offset]);
     res.status(200).json(keysToCamel(allInfo));
   } catch (err) {
     res.status(500).send(err.message);
