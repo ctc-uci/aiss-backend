@@ -33,7 +33,38 @@ publishedScheduleRouter.get('/', async (req, res) => {
 // GET /published-schedule/season - returns rows that match the season
 publishedScheduleRouter.get('/season', async (req, res) => {
   try {
+    // start and end times for the first interval (ie. JAN 1 2012 -> FEB 29 2012)
+    let startTime;
+    let endTime;
+    // start and end times for the second interval (ie. DEC 1 2012 -> DEC 31 2012)
+    let secondstartTime;
+    let secondendTime;
+
     const { season, year } = req.query;
+
+    // getting the intervals for each season
+    if (season.toLowerCase() === 'winter') {
+      startTime = `${year}-01-01`;
+      endTime = `${year}-02-29`;
+      secondstartTime = `${year}-12-01`;
+      secondendTime = `${year}-12-31`;
+    } else if (season.toLowerCase() === 'spring') {
+      startTime = `${year}-03-01`;
+      endTime = `${year}-05-31`;
+      secondstartTime = `${year}-03-01`;
+      secondendTime = `${year}-05-31`;
+    } else if (season.toLowerCase() === 'summer') {
+      startTime = `${year}-06-01`;
+      endTime = `${year}-08-31`;
+      secondstartTime = `${year}-06-01`;
+      secondendTime = `${year}-08-31`;
+    } else {
+      startTime = `${year}-09-01`;
+      endTime = `${year}-11-30`;
+      secondstartTime = `${year}-09-01`;
+      secondendTime = `${year}-11-30`;
+    }
+
     const seasonResult = await db.query(
       `
       WITH seasonPS AS
@@ -52,15 +83,15 @@ publishedScheduleRouter.get('/season', async (req, res) => {
         FROM published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
         WHERE 
-          C.season = $1 AND 
-          EXTRACT(YEAR FROM PS.start_time) = $2
+          (DATE(start_time) >= $1::date AND DATE(start_time) <= $2::date) OR
+          (DATE(start_time) >= $3::date AND DATE(start_time) <= $4::date)
       )
       SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
       FROM seasonPS
       GROUP BY DATE(start_time)
       ORDER BY DATE(start_time) ASC;
       `,
-      [season, year],
+      [startTime, endTime, secondstartTime, secondendTime],
     );
     res.status(200).json(keysToCamel(seasonResult));
   } catch (err) {
