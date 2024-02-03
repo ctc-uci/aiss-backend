@@ -13,8 +13,8 @@ catalogRouter.get('/', async (req, res) => {
     const params = [];
 
     if (title) {
-      query += ' AND title = $1';
-      params.push(title);
+      query += ' AND title ILIKE $1';
+      params.push(`%${title}%`);
     } else {
       params.push('');
     }
