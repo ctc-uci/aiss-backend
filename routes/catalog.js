@@ -4,12 +4,53 @@ const { db } = require('../server/db');
 
 const catalogRouter = express.Router();
 const { keysToCamel } = require('../common/utils');
-
+// modify /catalog
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
-    const allInfo = await db.query(`SELECT * from catalog;`);
-    res.status(200).json(keysToCamel(allInfo));
+    const { title, eventType, subject, season, year } = req.query;
+    let query = 'SELECT * FROM catalog WHERE 1=1';
+    const params = [];
+
+    if (title) {
+      query += ' AND title ILIKE $1';
+      params.push(`%${title}%`);
+    } else {
+      params.push('');
+    }
+
+    if (subject) {
+      query += ' AND subject = $2';
+      params.push(subject);
+    } else {
+      params.push('');
+    }
+
+    if (eventType) {
+      query += ' AND event_type = $3';
+      params.push(eventType);
+    } else {
+      params.push('');
+    }
+
+    if (season) {
+      query += ' AND season = $4';
+      params.push(season);
+    } else {
+      params.push('');
+    }
+
+    if (year) {
+      query += ' AND year = $5';
+      params.push(year);
+    } else {
+      params.push('');
+    }
+
+    query += ' ORDER BY title ASC';
+
+    const reqInfo = await db.query(query, params);
+    res.status(200).json(keysToCamel(reqInfo));
   } catch (err) {
     res.status(500).send(err.message);
   }
