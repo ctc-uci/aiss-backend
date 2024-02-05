@@ -7,14 +7,67 @@ const { keysToCamel, isInteger } = require('../common/utils');
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
+    const { title, eventType, subject, season, year } = req.query;
+    
     let { limit, page } = req.query;
     limit = isInteger(limit) ? parseInt(limit, 10) : 10;
     page = isInteger(page) ? parseInt(page, 10) : 1;
 
     const offset = (page - 1) * limit;
-    const allInfo = await db.query(`SELECT * from catalog LIMIT $1 OFFSET $2;`, [limit, offset]);
-    const eventCount = await db.query(`SELECT COUNT(DISTINCT id) from catalog;`);
-    res.status(200).json(keysToCamel({ events: allInfo, count: eventCount }));
+    
+    let query = 'FROM catalog WHERE 1=1';
+
+    const params = [];
+
+    if (title) {
+      query += ' AND title ILIKE $1';
+      params.push(`%${title}%`);
+    } else {
+      params.push('');
+    }
+
+    if (subject) {
+      query += ' AND subject = $2';
+      params.push(subject);
+    } else {
+      params.push('');
+    }
+
+    if (eventType) {
+      query += ' AND event_type = $3';
+      params.push(eventType);
+    } else {
+      params.push('');
+    }
+
+    if (season) {
+      query += ' AND season = $4';
+      params.push(season);
+    } else {
+      params.push('');
+    }
+
+    if (year) {
+      query += ' AND year = $5';
+      params.push(year);
+    } else {
+      params.push('');
+    }
+    params.push(limit);
+    params.push(offset);
+
+    query += ' ORDER BY title ASC';
+    
+    let countQuery = 'SELECT COUNT(*) ' + query + ';';
+    const eventCount = await db.query(query, params);
+    
+    query += ' LIMIT $6 OFFSET $7;';
+    query = 'SELECT * ' + query;
+
+    const reqInfo = await db.query(query, params);
+    
+    res.status(200).json(keysToCamel({ events: reqInfo, count: eventCount }));
+    
   } catch (err) {
     res.status(500).send(err.message);
   }

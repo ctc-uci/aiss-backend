@@ -30,6 +30,92 @@ publishedScheduleRouter.get('/', async (req, res) => {
   }
 });
 
+// GET /published-schedule/season - returns rows that match the season
+publishedScheduleRouter.get('/season', async (req, res) => {
+  try {
+    let startTime;
+    let endTime;
+
+    const { season, year } = req.query;
+
+    // getting the intervals for each season
+    if (season.toLowerCase() === 'winter') {
+      startTime = `${year - 1}-12-01`;
+      endTime = `${year}-02-29`;
+    } else if (season.toLowerCase() === 'spring') {
+      startTime = `${year}-03-01`;
+      endTime = `${year}-05-31`;
+    } else if (season.toLowerCase() === 'summer') {
+      startTime = `${year}-06-01`;
+      endTime = `${year}-08-31`;
+    } else {
+      startTime = `${year}-09-01`;
+      endTime = `${year}-11-30`;
+    }
+
+    const seasonResult = await db.query(
+      `
+      WITH seasonPS AS
+      (
+        SELECT
+          PS.id,
+          C.title,
+          C.event_type,
+          C.year,
+          PS.start_time,
+          PS.end_time,
+          PS.confirmed,
+          PS.confirmed_on,
+          PS.cohort,
+          PS.notes
+        FROM published_schedule PS
+        LEFT JOIN catalog C ON PS.event_id = C.id
+        WHERE
+          DATE(start_time) >= $1::date AND DATE(start_time) <= $2::date
+      )
+      SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
+      FROM seasonPS
+      GROUP BY DATE(start_time)
+      ORDER BY DATE(start_time) ASC;
+      `,
+      [startTime, endTime],
+    );
+    res.status(200).json(keysToCamel(seasonResult));
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+// GET /published-schedule/date - returns all events occurring on a specific date
+publishedScheduleRouter.get('/date', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const seasonResult = await db.query(
+      `
+      SELECT
+        PS.id,
+        C.title,
+        C.event_type,
+        C.year,
+        PS.start_time,
+        PS.end_time,
+        PS.confirmed,
+        PS.confirmed_on,
+        PS.cohort,
+        PS.notes
+      FROM published_schedule PS
+      LEFT JOIN catalog C ON PS.event_id = C.id
+      WHERE DATE(PS.start_time) = $1
+      ORDER BY start_time ASC;
+      `,
+      [date],
+    );
+    res.status(200).json(keysToCamel(seasonResult));
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
 // GET/:id - returns the rows that match the given id
 publishedScheduleRouter.get('/:id', async (req, res) => {
   try {
