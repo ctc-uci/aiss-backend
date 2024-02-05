@@ -57,7 +57,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       `
       WITH seasonPS AS
       (
-        SELECT 
+        SELECT
           PS.id,
           C.title,
           C.event_type,
@@ -70,7 +70,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           PS.notes
         FROM published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
-        WHERE 
+        WHERE
           DATE(start_time) >= $1::date AND DATE(start_time) <= $2::date
       )
       SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
@@ -92,7 +92,7 @@ publishedScheduleRouter.get('/date', async (req, res) => {
     const { date } = req.query;
     const seasonResult = await db.query(
       `
-      SELECT 
+      SELECT
         PS.id,
         C.title,
         C.event_type,
@@ -105,7 +105,7 @@ publishedScheduleRouter.get('/date', async (req, res) => {
         PS.notes
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
-      DATE(PS.start_time) = $1
+      WHERE DATE(PS.start_time) = $1
       ORDER BY start_time ASC;
       `,
       [date],
