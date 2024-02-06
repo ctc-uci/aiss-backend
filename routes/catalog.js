@@ -8,14 +8,14 @@ const { keysToCamel, isInteger } = require('../common/utils');
 catalogRouter.get('/', async (req, res) => {
   try {
     const { title, eventType, subject, season, year } = req.query;
-    
+
     let { limit, page } = req.query;
     limit = isInteger(limit) ? parseInt(limit, 10) : 10;
     page = isInteger(page) ? parseInt(page, 10) : 1;
 
     const offset = (page - 1) * limit;
-    
-    let query = 'FROM catalog WHERE 1=1';
+
+    let query = ' FROM catalog WHERE 1=1';
 
     const params = [];
 
@@ -53,21 +53,16 @@ catalogRouter.get('/', async (req, res) => {
     } else {
       params.push('');
     }
+
+    const eventCount = await db.query(`SELECT COUNT(*) ${query};`, params);
+
+    query += ' ORDER BY title ASC LIMIT $6 OFFSET $7;';
     params.push(limit);
     params.push(offset);
 
-    query += ' ORDER BY title ASC';
-    
-    let countQuery = 'SELECT COUNT(*) ' + query + ';';
-    const eventCount = await db.query(query, params);
-    
-    query += ' LIMIT $6 OFFSET $7;';
-    query = 'SELECT * ' + query;
+    const reqInfo = await db.query(`SELECT * ${query}`, params);
 
-    const reqInfo = await db.query(query, params);
-    
     res.status(200).json(keysToCamel({ events: reqInfo, count: eventCount }));
-    
   } catch (err) {
     res.status(500).send(err.message);
   }
