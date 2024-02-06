@@ -20,6 +20,11 @@ const isISODate = (str) => {
   }
 };
 
+// dependency for catalog.js
+const isInteger = (value) => {
+  return value && /^\d+$/.test(value);
+};
+
 const isObject = (o) => {
   return o === Object(o) && !isArray(o) && typeof o !== 'function' && !isISODate(o);
 };
@@ -52,4 +57,4 @@ const keysToCamel = (data) => {
   return data;
 };
 
-module.exports = { keysToCamel };
+module.exports = { keysToCamel, isInteger };
