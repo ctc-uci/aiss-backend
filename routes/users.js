@@ -37,18 +37,15 @@ userRouter.get('/:uid', async (req, res) => {
 
 userRouter.post('/create', async (req, res) => {
   try {
-    const { id, email, type, approved } = req.body;
-    await db.query(`INSERT INTO users (id, email, "type", approved) VALUES ($1, $2, $3, $4);`, [
-      id,
-      email,
-      type,
-      approved,
-    ]);
+    const { id, email, type, approved, approvedOn } = req.body;
+    await db.query(
+      `INSERT INTO users (id, email, "type", approved, approved_on) VALUES ($1, $2, $3, $4, $5);`,
+      [id, email, type, approved, approvedOn],
+    );
     res.status(201).json({
       id,
     });
   } catch (err) {
-    console.log('err', err);
     res.status(500).json({
       status: 'Failed',
       msg: err.message,
@@ -59,9 +56,10 @@ userRouter.post('/create', async (req, res) => {
 userRouter.put('/approve/:uid', async (req, res) => {
   try {
     const { uid } = req.params;
+    const currDate = new Date();
     const updatedApproval = await db.query(
-      `UPDATE users SET approved = TRUE WHERE id = $1 RETURNING *;`,
-      [uid],
+      `UPDATE users SET approved = TRUE, approved_on = $1 WHERE id = $2 RETURNING *;`,
+      [currDate, uid],
     );
     return res.status(200).send(keysToCamel(updatedApproval));
   } catch (err) {
