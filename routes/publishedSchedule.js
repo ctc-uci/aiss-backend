@@ -215,9 +215,13 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 });
 
 // POST - Adds a new row to the published_schedule table
+// NOTE: there is a requirement that the day already exist,
+// as that is how we are able to calculate the cohort from the event date
 publishedScheduleRouter.post('/', async (req, res) => {
   const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
   try {
+    const dayResult = await db.query(`SELECT * FROM day WHERE id = $1;`, [dayId]);
+    const { eventDate } = dayResult ? keysToCamel(dayResult[0]) : null;
     const returnedData = await db.query(
       `
       INSERT INTO
@@ -235,7 +239,16 @@ publishedScheduleRouter.post('/', async (req, res) => {
           ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
       `,
-      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, calculateYear(cohort), notes],
+      [
+        eventId,
+        dayId,
+        confirmed,
+        confirmedOn,
+        startTime,
+        endTime,
+        calculateYear(eventDate, cohort),
+        notes,
+      ],
     );
     res.status(201).json({
       status: 'Success',
@@ -247,10 +260,18 @@ publishedScheduleRouter.post('/', async (req, res) => {
 });
 
 // PUT/:id - Updates an existing row given an id
+// NOTE: there is a requirement that the selected DAY already exist; this is how
+// we are able to grab the event day from the day table for use in the cohort
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+    const psDayIdResult = await db.query(`SELECT day_id FROM published_schedule WHERE id = $1`, [
+      id,
+    ]);
+    const psDayId = psDayIdResult ? keysToCamel(psDayIdResult[0]).dayId : null;
+    const dayResult = await db.query(`SELECT * FROM day WHERE id = $1;`, [dayId || psDayId]);
+    const { eventDate } = dayResult ? keysToCamel(dayResult[0]) : null;
     const updatedPublishedSchedule = await db.query(
       `
       UPDATE published_schedule
@@ -274,7 +295,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         confirmedOn,
         startTime,
         endTime,
-        calculateYear(cohort),
+        calculateYear(eventDate, cohort),
         notes,
         id,
       ],

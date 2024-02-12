@@ -26,9 +26,10 @@ const isInteger = (value) => {
 };
 
 // dependency for publishedSchedule.js
-const calculateYear = (gradeLevel) => {
+const calculateYear = (eventDate, gradeLevel) => {
   if (gradeLevel) {
-    const currentDay = new Date();
+    const currentDay = new Date(eventDate);
+    // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
     if (gradeLevel.toLowerCase() === 'junior') {
       // if the current month is august or later
       // then junior will be current year + 2
