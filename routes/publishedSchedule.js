@@ -11,6 +11,7 @@ publishedScheduleRouter.get('/', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.day_id,
         C.host,
         C.title,
         PS.confirmed,
@@ -59,6 +60,13 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       (
         SELECT
           PS.id,
+          PS.day_id,
+          D.id AS day_day_id,
+          D.event_date,
+          D.start_time AS day_start_time,
+          D.end_time AS day_end_time,
+          D.location,
+          D.notes AS day_notes,
           C.title,
           C.event_type,
           C.year,
@@ -70,19 +78,43 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           PS.notes
         FROM published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
+        LEFT JOIN day D on PS.day_id = D.id
         WHERE
-          DATE(start_time) >= $1::date AND DATE(start_time) <= $2::date
+          DATE(PS.start_time) >= $1::date AND DATE(PS.start_time) <= $2::date
+          AND D.id = PS.day_id
       )
-      SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
+      SELECT DATE(seasonPS.start_time),
+      json_build_object (
+        'id', seasonPS.day_id,
+        'event_date', seasonPS.event_date,
+        'start_time', seasonPS.day_start_time,
+        'end_time', seasonPS.day_end_time,
+        'location', seasonPS.location,
+        'notes', seasonPS.day_notes
+      ) as day,
+      JSON_AGG(
+        json_build_object (
+          'id', seasonPS.id,
+          'title', seasonPS.title,
+          'event_type', seasonPS.event_type,
+          'year', seasonPS.year,
+          'start_time', seasonPS.start_time,
+          'end_time', seasonPS.end_time,
+          'confirmed', seasonPS.confirmed,
+          'confirmed_on', seasonPS.confirmed_on,
+          'cohort', seasonPS.cohort,
+          'notes', seasonPS.notes
+        )
+      ) AS data
       FROM seasonPS
-      GROUP BY DATE(start_time)
+      GROUP BY DATE(start_time), day_id, event_date, day_start_time, day_end_time, location, day_notes 
       ORDER BY DATE(start_time) ASC;
       `,
       [startTime, endTime],
     );
     res.status(200).json(keysToCamel(seasonResult));
   } catch (err) {
-    res.status(400).send(err.message);
+    res.status(500).send(err.message);
   }
 });
 
@@ -92,21 +124,57 @@ publishedScheduleRouter.get('/date', async (req, res) => {
     const { date } = req.query;
     const seasonResult = await db.query(
       `
-      SELECT
-        PS.id,
-        C.title,
-        C.event_type,
-        C.year,
-        PS.start_time,
-        PS.end_time,
-        PS.confirmed,
-        PS.confirmed_on,
-        PS.cohort,
-        PS.notes
-      FROM published_schedule PS
-      LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE DATE(PS.start_time) = $1
-      ORDER BY start_time ASC;
+      WITH seasonPS AS
+      (
+        SELECT
+          PS.id,
+          PS.day_id,
+          D.event_date,
+          D.start_time AS day_start_time,
+          D.end_time AS day_end_time,
+          D.location,
+          D.notes AS day_notes,
+          C.title,
+          C.event_type,
+          C.year,
+          PS.start_time,
+          PS.end_time,
+          PS.confirmed,
+          PS.confirmed_on,
+          PS.cohort,
+          PS.notes
+        FROM published_schedule PS
+        LEFT JOIN catalog C ON PS.event_id = C.id
+        LEFT JOIN day D on PS.day_id = D.id
+        WHERE
+          DATE(PS.start_time) = $1::date
+      )
+
+      SELECT json_build_object (
+        'id', seasonPS.day_id,
+        'event_date', seasonPS.event_date,
+        'start_time', seasonPS.day_start_time,
+        'end_time', seasonPS.day_end_time,
+        'location', seasonPS.location,
+        'notes', seasonPS.day_notes
+      ) as day,
+      JSON_AGG(
+        json_build_object (
+          'id', seasonPS.id,
+          'title', seasonPS.title,
+          'event_type', seasonPS.event_type,
+          'year', seasonPS.year,
+          'start_time', seasonPS.start_time,
+          'end_time', seasonPS.end_time,
+          'confirmed', seasonPS.confirmed,
+          'confirmed_on', seasonPS.confirmed_on,
+          'cohort', seasonPS.cohort,
+          'notes', seasonPS.notes
+        )
+      ) AS data
+      FROM seasonPS
+      GROUP BY DATE(start_time), day_id, event_date, day_start_time, day_end_time, location, day_notes 
+      ORDER BY DATE(start_time) ASC;
       `,
       [date],
     );
@@ -124,6 +192,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.day_id,
         C.host,
         C.title,
         PS.confirmed,
@@ -147,14 +216,14 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 
 // POST - Adds a new row to the published_schedule table
 publishedScheduleRouter.post('/', async (req, res) => {
-  const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
   try {
     const returnedData = await db.query(
       `
       INSERT INTO
         published_schedule (
-          id,
           event_id,
+          day_id,
           confirmed,
           confirmed_on,
           start_time,
@@ -163,10 +232,10 @@ publishedScheduleRouter.post('/', async (req, res) => {
           notes
         )
         VALUES
-          (nextval('published_schedule_id_seq'), $1, $2, $3, $4, $5, $6, $7)
+          ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
+      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
     );
     res.status(201).json({
       status: 'Success',
@@ -181,23 +250,24 @@ publishedScheduleRouter.post('/', async (req, res) => {
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+    const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
     const updatedPublishedSchedule = await db.query(
       `
       UPDATE published_schedule
       SET
         event_id = COALESCE($1, event_id),
-        confirmed = COALESCE($2, confirmed),
-        confirmed_on = COALESCE($3, confirmed_on),
-        start_time = COALESCE($4, start_time),
-        end_time = COALESCE($5, end_time),
-        cohort = COALESCE($6, cohort),
-        notes = COALESCE($7, notes)
-      WHERE id = $8
+        day_id = COALESCE($2, day_id),
+        confirmed = COALESCE($3, confirmed),
+        confirmed_on = COALESCE($4, confirmed_on),
+        start_time = COALESCE($5, start_time),
+        end_time = COALESCE($6, end_time),
+        cohort = COALESCE($7, cohort),
+        notes = COALESCE($8, notes)
+      WHERE id = $9
 
       RETURNING *;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
+      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
     );
     res.status(200).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
@@ -216,7 +286,7 @@ publishedScheduleRouter.delete('/:id', async (req, res) => {
       `,
       [id],
     );
-    res.status(200).send(deletedEntry);
+    res.status(200).send(keysToCamel(deletedEntry));
   } catch (err) {
     res.status(500).send(err.message);
   }
