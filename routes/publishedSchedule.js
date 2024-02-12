@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../server/db');
-const { keysToCamel } = require('../common/utils');
+const { keysToCamel, calculateYear } = require('../common/utils');
 
 const publishedScheduleRouter = express.Router();
 
@@ -235,7 +235,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
           ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
       `,
-      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
+      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, calculateYear(cohort), notes],
     );
     res.status(201).json({
       status: 'Success',
@@ -267,7 +267,17 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
 
       RETURNING *;
       `,
-      [eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
+      [
+        eventId,
+        dayId,
+        confirmed,
+        confirmedOn,
+        startTime,
+        endTime,
+        calculateYear(cohort),
+        notes,
+        id,
+      ],
     );
     res.status(200).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
