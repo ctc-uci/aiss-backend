@@ -225,8 +225,8 @@ publishedScheduleRouter.post('/', async (req, res) => {
       `
       UPDATE day
         SET
-          start_time = CASE WHEN $1::timestamp < start_time THEN $1::timestamp ELSE start_time END,
-          end_time = CASE WHEN $2::timestamp > end_time THEN $2::timestamp ELSE end_time END
+          start_time = CASE WHEN $1 < start_time THEN $1 ELSE start_time END,
+          end_time = CASE WHEN $2 > end_time THEN $2 ELSE end_time END
         WHERE id = $3;
       `,
       [startTime, endTime, dayId],
@@ -392,14 +392,14 @@ publishedScheduleRouter.delete('/:id', async (req, res) => {
       await db.query(`DELETE FROM day WHERE id = $1`, [dayId]);
     } else {
       // if the event start time was the earliest change to earliest in PS table for that day
-      if (startTime.getTime() === dayResult.startTime.getTime()) {
+      if (startTime === dayResult.startTime) {
         await db.query(
           `UPDATE day SET start_time = (SELECT MIN(start_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1`,
           [dayId],
         );
       }
       // if the event end time was the latest change to latest in PS table for that day
-      if (endTime.getTime() === dayResult.endTime.getTime()) {
+      if (endTime === dayResult.endTime) {
         await db.query(
           `UPDATE day SET end_time = (SELECT MAX(end_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1`,
           [dayId],
