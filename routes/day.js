@@ -48,9 +48,10 @@ dayRouter.post('/', async (req, res) => {
         start_time,
         end_time,
         location,
-        notes
+        notes,
+        day_count
       ) VALUES (
-        nextval('day_id_seq'), $1, $2, $3, $4, $5
+        nextval('day_id_seq'), $1, $2, $3, $4, $5, 0
       ) RETURNING id;
       `,
       [eventDate, startTime, endTime, location, notes],

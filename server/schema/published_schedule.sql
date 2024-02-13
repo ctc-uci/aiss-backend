@@ -14,3 +14,5 @@ CREATE TABLE IF NOT EXISTS published_schedule (
     FOREIGN KEY (day_id)
         REFERENCES day (id)
 );
+
+CREATE INDEX idx_day_id ON published_schedule (day_id);
