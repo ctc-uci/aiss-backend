@@ -39,7 +39,7 @@ dayRouter.get('/:id', async (req, res) => {
 // POST - creates a new day
 dayRouter.post('/', async (req, res) => {
   try {
-    const { eventDate, startTime, endTime, location, notes } = req.body;
+    const { eventDate, location, notes } = req.body;
     const newDay = await db.query(
       `
       INSERT INTO day (
@@ -51,10 +51,10 @@ dayRouter.post('/', async (req, res) => {
         notes,
         day_count
       ) VALUES (
-        nextval('day_id_seq'), $1, $2, $3, $4, $5, 0
+        nextval('day_id_seq'), $1, '23:59:59', '00:00:00', $2, $3, 0
       ) RETURNING id;
       `,
-      [eventDate, startTime, endTime, location, notes],
+      [eventDate, location, notes],
     );
     res.status(201).json({
       status: 'Success',

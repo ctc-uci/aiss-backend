@@ -107,7 +107,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
         )
       ) AS data
       FROM seasonPS
-      GROUP BY event_date, day_id, day_start_time, day_end_time, location, day_notes 
+      GROUP BY event_date, day_id, day_start_time, day_end_time, location, day_notes
       ORDER BY event_date ASC;
       `,
       [startTime, endTime],
@@ -124,24 +124,7 @@ publishedScheduleRouter.get('/date', async (req, res) => {
     const { date } = req.query;
     const seasonResult = await db.query(
       `
-      WITH seasonPS AS
-      (
-        SELECT
-          PS.id,
-          PS.day_id,
-          C.title,
-          C.event_type,
-          C.year,
-          PS.start_time,
-          PS.end_time,
-          PS.confirmed,
-          PS.confirmed_on,
-          PS.cohort,
-          PS.notes
-        FROM published_schedule PS
-        LEFT JOIN catalog C ON PS.event_id = C.id
-      )
-      SELECT 
+      SELECT
         json_build_object(
             'id', D.id,
             'event_date', D.event_date,
@@ -152,23 +135,23 @@ publishedScheduleRouter.get('/date', async (req, res) => {
         ) AS day_data,
         JSON_AGG(
           json_build_object (
-            'id', seasonPS.id,
-            'day_id', seasonPS.day_id,
-            'title', seasonPS.title,
-            'event_type', seasonPS.event_type,
-            'year', seasonPS.year,
-            'start_time', seasonPS.start_time,
-            'end_time', seasonPS.end_time,
-            'confirmed', seasonPS.confirmed,
-            'confirmed_on', seasonPS.confirmed_on,
-            'cohort', seasonPS.cohort,
-            'notes', seasonPS.notes
+            'id', PS.id,
+            'day_id', PS.day_id,
+            'title', C.title,
+            'event_type', C.event_type,
+            'year', C.year,
+            'start_time', PS.start_time,
+            'end_time', PS.end_time,
+            'confirmed', PS.confirmed,
+            'confirmed_on', PS.confirmed_on,
+            'cohort', PS.cohort,
+            'notes', PS.notes
           )
         ) AS data
-      FROM 
-          seasonPS
-      JOIN 
-          day D ON seasonPS.day_id = D.id and d.event_date = $1::date
+      FROM day D
+      LEFT JOIN published_schedule PS ON PS.day_id = D.id
+      LEFT JOIN catalog C ON PS.event_id = C.id
+      WHERE D.event_date = $1::date
       GROUP BY d.event_date, d.id
       ORDER BY d.event_date;
       `,
@@ -176,7 +159,7 @@ publishedScheduleRouter.get('/date', async (req, res) => {
     );
     res.status(200).json(keysToCamel(seasonResult)[0]);
   } catch (err) {
-    res.status(400).send(err.message);
+    res.status(500).send(err.message);
   }
 });
 
@@ -313,7 +296,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         confirmedOn,
         startTime,
         endTime,
-        calculateYear(eventDate, cohort),
+        cohort ? calculateYear(eventDate, cohort) : cohort,
         notes,
         id,
       ],
