@@ -18,7 +18,8 @@ publishedScheduleRouter.get('/', async (req, res) => {
         PS.start_time,
         PS.end_time,
         PS.cohort,
-        PS.notes
+        PS.notes,
+        PS.created_on
       FROM
         published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id;
@@ -27,6 +28,64 @@ publishedScheduleRouter.get('/', async (req, res) => {
     res.status(200).json(keysToCamel(allPublishedSchedules));
   } catch (err) {
     res.status(500).send(err.message);
+  }
+});
+
+// GET/published-schedule/recently-added - returns the rows that were added in the past week
+publishedScheduleRouter.get('/recently-added', async (req, res) => {
+  try {
+    const recentAddResult = await db.query(
+      `
+      SELECT
+        PS.id,
+        C.title,
+        C.event_type,
+        C.year,
+        PS.start_time,
+        PS.end_time,
+        PS.confirmed,
+        PS.confirmed_on,
+        PS.cohort,
+        PS.notes,
+        PS.created_on
+      FROM published_schedule PS
+      LEFT JOIN catalog C ON PS.event_id = C.id
+      WHERE PS.created_on > current_date - 7
+      ORDER BY created_on DESC;
+      `,
+    );
+    res.status(200).json(keysToCamel(recentAddResult));
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+});
+
+// GET/published-schedule/recently-confirmed - returns the rows that were confirmed in the past week
+publishedScheduleRouter.get('/recently-confirmed', async (req, res) => {
+  try {
+    const recentConfirm = await db.query(
+      `
+      SELECT
+        PS.id,
+        C.title,
+        C.event_type,
+        C.year,
+        PS.start_time,
+        PS.end_time,
+        PS.confirmed,
+        PS.confirmed_on,
+        PS.cohort,
+        PS.notes,
+        PS.created_on
+      FROM published_schedule PS
+      LEFT JOIN catalog C ON PS.event_id = C.id
+      WHERE PS.confirmed_on > current_date - 7
+      ORDER BY created_on DESC;
+      `,
+    );
+    res.status(200).json(keysToCamel(recentConfirm));
+  } catch (err) {
+    res.status(400).send(err.message);
   }
 });
 
@@ -67,7 +126,8 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           PS.confirmed,
           PS.confirmed_on,
           PS.cohort,
-          PS.notes
+          PS.notes,
+          PS.created_on
         FROM published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
         WHERE
@@ -102,7 +162,8 @@ publishedScheduleRouter.get('/date', async (req, res) => {
         PS.confirmed,
         PS.confirmed_on,
         PS.cohort,
-        PS.notes
+        PS.notes,
+        PS.created_on
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
       WHERE DATE(PS.start_time) = $1
@@ -131,7 +192,8 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
         PS.start_time,
         PS.end_time,
         PS.cohort,
-        PS.notes
+        PS.notes,
+        PS.created_on
       FROM
         published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
@@ -148,6 +210,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 // POST - Adds a new row to the published_schedule table
 publishedScheduleRouter.post('/', async (req, res) => {
   const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const currDate = new Date();
   try {
     const returnedData = await db.query(
       `
@@ -160,13 +223,14 @@ publishedScheduleRouter.post('/', async (req, res) => {
           start_time,
           end_time,
           cohort,
-          notes
+          notes,
+          created_on
         )
         VALUES
-          (nextval('published_schedule_id_seq'), $1, $2, $3, $4, $5, $6, $7)
-        RETURNING id;
+          (nextval('published_schedule_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, created_on;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
+      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, currDate],
     );
     res.status(201).json({
       status: 'Success',
@@ -181,7 +245,8 @@ publishedScheduleRouter.post('/', async (req, res) => {
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+    const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, createdOn } =
+      req.body;
     const updatedPublishedSchedule = await db.query(
       `
       UPDATE published_schedule
@@ -192,12 +257,13 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         start_time = COALESCE($4, start_time),
         end_time = COALESCE($5, end_time),
         cohort = COALESCE($6, cohort),
-        notes = COALESCE($7, notes)
-      WHERE id = $8
+        notes = COALESCE($7, notes),
+        created_on = COALESCE($8, created_on)
+      WHERE id = $9
 
       RETURNING *;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
+      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, createdOn, id],
     );
     res.status(200).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {

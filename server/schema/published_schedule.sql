@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS published_schedule (
     end_time timestamp NOT NULL,
     cohort varchar[] NOT NULL,
     notes varchar(100),
+    created_on date NOT NULL,
     FOREIGN KEY (event_id)
         REFERENCES catalog (id)
 );
