@@ -50,7 +50,7 @@ publishedScheduleRouter.get('/recently-added', async (req, res) => {
         PS.created_on
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE PS.created_on = PS.confirmed_on AND PS.created_on > current_date - 7 AND confirmed = true
+      WHERE PS.confirmed_on > current_date - 7
       ORDER BY created_on DESC;
       `,
     );
@@ -79,7 +79,7 @@ publishedScheduleRouter.get('/recently-confirmed', async (req, res) => {
         PS.created_on
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE PS.confirmed_on > current_date - 7
+      WHERE PS.created_on = PS.confirmed_on AND PS.created_on > current_date - 7 AND confirmed = true
       ORDER BY created_on DESC;
       `,
     );
