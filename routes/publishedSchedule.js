@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../server/db');
-const { keysToCamel } = require('../common/utils');
+const { keysToCamel, calculateYear } = require('../common/utils');
 
 const publishedScheduleRouter = express.Router();
 
@@ -11,6 +11,7 @@ publishedScheduleRouter.get('/', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.day_id,
         C.host,
         C.title,
         PS.confirmed,
@@ -59,6 +60,13 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       (
         SELECT
           PS.id,
+          PS.day_id,
+          D.id AS day_day_id,
+          D.event_date,
+          D.start_time AS day_start_time,
+          D.end_time AS day_end_time,
+          D.location,
+          D.notes AS day_notes,
           C.title,
           C.event_type,
           C.year,
@@ -70,19 +78,43 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           PS.notes
         FROM published_schedule PS
         LEFT JOIN catalog C ON PS.event_id = C.id
+        LEFT JOIN day D on PS.day_id = D.id
         WHERE
-          DATE(start_time) >= $1::date AND DATE(start_time) <= $2::date
+          D.event_date >= $1::date AND D.event_date <= $2::date
+          AND D.id = PS.day_id
       )
-      SELECT DATE(seasonPS.start_time), JSON_AGG(seasonPS.*) AS data
+      SELECT event_date,
+      json_build_object (
+        'id', seasonPS.day_id,
+        'event_date', seasonPS.event_date,
+        'start_time', seasonPS.day_start_time,
+        'end_time', seasonPS.day_end_time,
+        'location', seasonPS.location,
+        'notes', seasonPS.day_notes
+      ) as day,
+      JSON_AGG(
+        json_build_object (
+          'id', seasonPS.id,
+          'title', seasonPS.title,
+          'event_type', seasonPS.event_type,
+          'year', seasonPS.year,
+          'start_time', seasonPS.start_time,
+          'end_time', seasonPS.end_time,
+          'confirmed', seasonPS.confirmed,
+          'confirmed_on', seasonPS.confirmed_on,
+          'cohort', seasonPS.cohort,
+          'notes', seasonPS.notes
+        )
+      ) AS data
       FROM seasonPS
-      GROUP BY DATE(start_time)
-      ORDER BY DATE(start_time) ASC;
+      GROUP BY event_date, day_id, day_start_time, day_end_time, location, day_notes
+      ORDER BY event_date ASC;
       `,
       [startTime, endTime],
     );
     res.status(200).json(keysToCamel(seasonResult));
   } catch (err) {
-    res.status(400).send(err.message);
+    res.status(500).send(err.message);
   }
 });
 
@@ -93,26 +125,41 @@ publishedScheduleRouter.get('/date', async (req, res) => {
     const seasonResult = await db.query(
       `
       SELECT
-        PS.id,
-        C.title,
-        C.event_type,
-        C.year,
-        PS.start_time,
-        PS.end_time,
-        PS.confirmed,
-        PS.confirmed_on,
-        PS.cohort,
-        PS.notes
-      FROM published_schedule PS
+        json_build_object(
+            'id', D.id,
+            'event_date', D.event_date,
+            'start_time', D.start_time,
+            'end_time', D.end_time,
+            'location', D.location,
+            'notes', D.notes
+        ) AS day_data,
+        JSON_AGG(
+          json_build_object (
+            'id', PS.id,
+            'day_id', PS.day_id,
+            'title', C.title,
+            'event_type', C.event_type,
+            'year', C.year,
+            'start_time', PS.start_time,
+            'end_time', PS.end_time,
+            'confirmed', PS.confirmed,
+            'confirmed_on', PS.confirmed_on,
+            'cohort', PS.cohort,
+            'notes', PS.notes
+          )
+        ) AS data
+      FROM day D
+      LEFT JOIN published_schedule PS ON PS.day_id = D.id
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE DATE(PS.start_time) = $1
-      ORDER BY start_time ASC;
+      WHERE D.event_date = $1::date
+      GROUP BY d.event_date, d.id
+      ORDER BY d.event_date;
       `,
       [date],
     );
-    res.status(200).json(keysToCamel(seasonResult));
+    res.status(200).json(keysToCamel(seasonResult)[0]);
   } catch (err) {
-    res.status(400).send(err.message);
+    res.status(500).send(err.message);
   }
 });
 
@@ -124,6 +171,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.day_id,
         C.host,
         C.title,
         PS.confirmed,
@@ -146,15 +194,32 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 });
 
 // POST - Adds a new row to the published_schedule table
+// NOTE: there is a requirement that the day already exist,
+// as that is how we are able to calculate the cohort from the event date
 publishedScheduleRouter.post('/', async (req, res) => {
-  const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
   try {
+    const dayResult = await db.query(
+      `UPDATE day SET day_count = day_count + 1 WHERE id = $1 RETURNING *;`,
+      [dayId],
+    );
+    const { eventDate } = dayResult ? keysToCamel(dayResult[0]) : null;
+    await db.query(
+      `
+      UPDATE day
+        SET
+          start_time = CASE WHEN $1 < start_time THEN $1 ELSE start_time END,
+          end_time = CASE WHEN $2 > end_time THEN $2 ELSE end_time END
+        WHERE id = $3;
+      `,
+      [startTime, endTime, dayId],
+    );
     const returnedData = await db.query(
       `
       INSERT INTO
         published_schedule (
-          id,
           event_id,
+          day_id,
           confirmed,
           confirmed_on,
           start_time,
@@ -163,10 +228,19 @@ publishedScheduleRouter.post('/', async (req, res) => {
           notes
         )
         VALUES
-          (nextval('published_schedule_id_seq'), $1, $2, $3, $4, $5, $6, $7)
+          ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes],
+      [
+        eventId,
+        dayId,
+        confirmed,
+        confirmedOn,
+        startTime,
+        endTime,
+        calculateYear(eventDate, cohort),
+        notes,
+      ],
     );
     res.status(201).json({
       status: 'Success',
@@ -178,27 +252,94 @@ publishedScheduleRouter.post('/', async (req, res) => {
 });
 
 // PUT/:id - Updates an existing row given an id
+// NOTE: there is a requirement that the selected DAY already exist; this is how
+// we are able to grab the event day from the day table for use in the cohort
+// NOTE: if the day that you're moving the event FROM will have 0 associated events,
+// IT WILL BE DELETED
 publishedScheduleRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+    const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+    // get the current day from the PS table
+    const psDayIdResult = keysToCamel(
+      await db.query(`SELECT day_id FROM published_schedule WHERE id = $1;`, id),
+    )[0];
+    // extract the old day id
+    const psDayId = psDayIdResult.dayId;
+    // now we need to grab the data from the table (should use dayId unless it is null)
+    const dayResult = keysToCamel(
+      await db.query(`SELECT * FROM day WHERE id = $1;`, [dayId || psDayId]),
+    )[0];
+    // grab the eventDate so that you can set the years
+    const { eventDate } = dayResult;
+    // update the PS
     const updatedPublishedSchedule = await db.query(
       `
       UPDATE published_schedule
       SET
         event_id = COALESCE($1, event_id),
-        confirmed = COALESCE($2, confirmed),
-        confirmed_on = COALESCE($3, confirmed_on),
-        start_time = COALESCE($4, start_time),
-        end_time = COALESCE($5, end_time),
-        cohort = COALESCE($6, cohort),
-        notes = COALESCE($7, notes)
-      WHERE id = $8
+        day_id = COALESCE($2, day_id),
+        confirmed = COALESCE($3, confirmed),
+        confirmed_on = COALESCE($4, confirmed_on),
+        start_time = COALESCE($5, start_time),
+        end_time = COALESCE($6, end_time),
+        cohort = COALESCE($7, cohort),
+        notes = COALESCE($8, notes)
+      WHERE id = $9
 
       RETURNING *;
       `,
-      [eventId, confirmed, confirmedOn, startTime, endTime, cohort, notes, id],
+      [
+        eventId,
+        dayId,
+        confirmed,
+        confirmedOn,
+        startTime,
+        endTime,
+        cohort ? calculateYear(eventDate, cohort) : cohort,
+        notes,
+        id,
+      ],
     );
+    // if day was modified we need to query and reset the min/max
+    if (dayId) {
+      if (startTime) {
+        await db.query(
+          `UPDATE day SET start_time = (SELECT MIN(start_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1;
+           UPDATE day SET start_time = (SELECT MIN(start_time) FROM published_schedule WHERE day_id = $2) WHERE id = $2;`,
+          [psDayId, dayId],
+        );
+      }
+      if (endTime) {
+        await db.query(
+          `UPDATE day SET end_time = (SELECT MAX(end_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1;
+           UPDATE day SET end_time = (SELECT MAX(end_time) FROM published_schedule WHERE day_id = $2) WHERE id = $2;`,
+          [psDayId, dayId],
+        );
+      }
+      const dayCountResult = await db.query(
+        `UPDATE day SET day_count = day_count + 1 WHERE id = $1; UPDATE day SET day_count = day_count - 1 WHERE id = $2 RETURNING day_count;`,
+        [dayId, psDayId],
+      );
+      const { dayCount } = keysToCamel(dayCountResult);
+      // if start time was passed alongside day we need to update the old day and change the new day
+      if (dayCount === 0) {
+        await db.query(`DELETE FROM day WHERE id = $1`, [psDayId]);
+      }
+    } else {
+      if (startTime) {
+        await db.query(
+          `UPDATE day SET start_time = (SELECT MIN(start_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1;`,
+          [psDayId],
+        );
+      }
+      if (endTime) {
+        await db.query(
+          `UPDATE day SET end_time = (SELECT MAX(end_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1;`,
+          [psDayId],
+        );
+      }
+    }
     res.status(200).json(keysToCamel(updatedPublishedSchedule));
   } catch (err) {
     res.status(500).send(err.message);
@@ -206,9 +347,12 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE/:id - deletes an existing row given an id
+// NOTE: if the day that you're deleting the event FROM will have 0 associated events,
+// IT WILL BE DELETED
 publishedScheduleRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    // delete PS entry
     const deletedEntry = await db.query(
       `
       DELETE FROM published_schedule
@@ -216,7 +360,36 @@ publishedScheduleRouter.delete('/:id', async (req, res) => {
       `,
       [id],
     );
-    res.status(200).send(deletedEntry);
+    // grab relevant info from the deleted row
+    const { dayId, startTime, endTime } = keysToCamel(deletedEntry[0]);
+
+    // update the day table
+    const updatedDay = await db.query(
+      `UPDATE day SET day_count = day_count - 1 WHERE id = $1 RETURNING *;`,
+      [dayId],
+    );
+    const dayResult = keysToCamel(updatedDay[0]);
+    const { dayCount } = dayResult;
+    // if the day has 0 events delete day
+    if (dayCount === 0) {
+      await db.query(`DELETE FROM day WHERE id = $1`, [dayId]);
+    } else {
+      // if the event start time was the earliest change to earliest in PS table for that day
+      if (startTime === dayResult.startTime) {
+        await db.query(
+          `UPDATE day SET start_time = (SELECT MIN(start_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1`,
+          [dayId],
+        );
+      }
+      // if the event end time was the latest change to latest in PS table for that day
+      if (endTime === dayResult.endTime) {
+        await db.query(
+          `UPDATE day SET end_time = (SELECT MAX(end_time) FROM published_schedule WHERE day_id = $1) WHERE id = $1`,
+          [dayId],
+        );
+      }
+    }
+    res.status(200).send(keysToCamel(deletedEntry));
   } catch (err) {
     res.status(500).send(err.message);
   }
