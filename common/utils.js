@@ -25,6 +25,34 @@ const isInteger = (value) => {
   return value && /^\d+$/.test(value);
 };
 
+// dependency for publishedSchedule.js
+const calculateYear = (eventDate, gradeLevel) => {
+  if (gradeLevel) {
+    const currentDay = new Date(eventDate);
+    // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
+    if (gradeLevel.toLowerCase() === 'junior') {
+      // if the current month is august or later
+      // then junior will be current year + 2
+      // otherwise junior will be current year + 1
+      // months are zero indexed
+      return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10)];
+    }
+    if (gradeLevel.toLowerCase() === 'senior') {
+      // if the current month is august or later
+      // then senior will be current year + 1
+      // otherwise senior will be current year
+      return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10)];
+    }
+    if (gradeLevel.toLowerCase() === 'both') {
+      return [
+        (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
+        (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
+      ];
+    }
+  }
+  return [];
+};
+
 const isObject = (o) => {
   return o === Object(o) && !isArray(o) && typeof o !== 'function' && !isISODate(o);
 };
@@ -57,4 +85,4 @@ const keysToCamel = (data) => {
   return data;
 };
 
-module.exports = { keysToCamel, isInteger };
+module.exports = { keysToCamel, isInteger, calculateYear };
