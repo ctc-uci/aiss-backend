@@ -31,6 +31,58 @@ publishedScheduleRouter.get('/', async (req, res) => {
   }
 });
 
+// GET /published-schedule/all-seasons - return all the seasons
+publishedScheduleRouter.get('/all-seasons', async (req, res) => {
+  const getSeason = (date) => {
+    const formattedDate = new Date(date.event_date);
+    const year = formattedDate.getFullYear();
+    const month = formattedDate.getMonth();
+    // const day = formattedDate.getDate();
+
+    // winter
+    // december (11) -> winter [year + 1]
+    // january (0) - february (1) -> winter [year]
+    if (month === 11) {
+      return `Winter ${year + 1}`;
+    }
+    if (month === 0 || month === 1) {
+      return `Winter ${year}`;
+    }
+    // spring
+    // march-may -> winter [year]
+    if (month >= 2 && month <= 4) {
+      return `Winter ${year}`;
+    }
+    // summer
+    // june-august -> summer [year]
+    if (month >= 5 && month <= 7) {
+      return `Summer ${year}`;
+    }
+    // fall
+    // september-november -> fall [year]
+    return `Fall ${year}`;
+  };
+
+  try {
+    const allDatesResult = await db.query(
+      `
+        SELECT D.event_date 
+        FROM
+          published_schedule AS PS, day AS D
+        WHERE 
+          D.id = PS.day_id
+      `,
+    );
+    const allSeasonsResult = allDatesResult.map((row) => {
+      return getSeason(row);
+    });
+    const allUniqueSeasonsResult = [...new Set(allSeasonsResult)];
+    res.status(200).json(keysToCamel(allUniqueSeasonsResult));
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // GET /published-schedule/season - returns rows that match the season
 publishedScheduleRouter.get('/season', async (req, res) => {
   try {
@@ -42,7 +94,11 @@ publishedScheduleRouter.get('/season', async (req, res) => {
     // getting the intervals for each season
     if (season.toLowerCase() === 'winter') {
       startTime = `${year - 1}-12-01`;
-      endTime = `${year}-02-29`;
+      if ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) {
+        endTime = `${year}-02-29`;
+      } else {
+        endTime = `${year}-02-28`;
+      }
     } else if (season.toLowerCase() === 'spring') {
       startTime = `${year}-03-01`;
       endTime = `${year}-05-31`;
