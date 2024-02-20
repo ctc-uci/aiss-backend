@@ -87,6 +87,8 @@ publishedScheduleRouter.get('/recently-confirmed', async (req, res) => {
     res.status(200).json(keysToCamel(recentConfirm));
   } catch (err) {
     res.status(400).send(err.message);
+  }
+});
 
 // GET /published-schedule/all-seasons - return all the seasons
 publishedScheduleRouter.get('/all-seasons', async (req, res) => {
@@ -123,10 +125,10 @@ publishedScheduleRouter.get('/all-seasons', async (req, res) => {
   try {
     const allDatesResult = await db.query(
       `
-        SELECT D.event_date 
+        SELECT D.event_date
         FROM
           published_schedule AS PS, day AS D
-        WHERE 
+        WHERE
           D.id = PS.day_id
       `,
     );
@@ -357,7 +359,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
         endTime,
         calculateYear(eventDate, cohort),
         notes,
-        currDate
+        currDate,
       ],
     );
     res.status(201).json({
@@ -408,7 +410,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         cohort = COALESCE($7, cohort),
         notes = COALESCE($8, notes)
         created_on = COALESCE($9, created_on)
-        
+
       WHERE id = $10
 
       RETURNING *;
