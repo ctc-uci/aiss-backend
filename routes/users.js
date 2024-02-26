@@ -37,10 +37,10 @@ userRouter.get('/:uid', async (req, res) => {
 
 userRouter.post('/create', async (req, res) => {
   try {
-    const { id, email, type, approved, approvedOn } = req.body;
+    const { id, email, type, approved, approvedOn, firstName, lastName } = req.body;
     await db.query(
-      `INSERT INTO users (id, email, "type", approved, approved_on) VALUES ($1, $2, $3, $4, $5);`,
-      [id, email, type, approved, approvedOn],
+      `INSERT INTO users (id, email, "type", approved, approved_on, first_name, last_name) VALUES ($1, $2, $3, $4, $5, $6, $7);`,
+      [id, email, type, approved, approvedOn, firstName, lastName],
     );
     res.status(201).json({
       id,
