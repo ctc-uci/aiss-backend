@@ -11,6 +11,7 @@ publishedScheduleRouter.get('/', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.event_id,
         PS.day_id,
         C.host,
         C.title,
@@ -287,6 +288,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       `
       SELECT
         PS.id,
+        PS.event_id,
         PS.day_id,
         C.host,
         C.title,

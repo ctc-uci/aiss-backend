@@ -1,68 +1,15 @@
 const express = require('express');
+
 const { db } = require('../server/db');
 
 const catalogRouter = express.Router();
-const { keysToCamel, isInteger } = require('../common/utils');
+const { keysToCamel } = require('../common/utils');
 
 // -- GET - Returns all data from the catalog table
 catalogRouter.get('/', async (req, res) => {
   try {
-    const { title, eventType, subject, season, year } = req.query;
-
-    let { limit, page } = req.query;
-    limit = isInteger(limit) ? parseInt(limit, 10) : 10;
-    page = isInteger(page) ? parseInt(page, 10) : 1;
-
-    const offset = (page - 1) * limit;
-
-    let query = ' FROM catalog WHERE 1=1';
-
-    const params = [];
-
-    if (title) {
-      query += ' AND title ILIKE $1';
-      params.push(`%${title}%`);
-    } else {
-      params.push('');
-    }
-
-    if (subject) {
-      query += ' AND subject = $2';
-      params.push(subject);
-    } else {
-      params.push('');
-    }
-
-    if (eventType) {
-      query += ' AND event_type = $3';
-      params.push(eventType);
-    } else {
-      params.push('');
-    }
-
-    if (season) {
-      query += ' AND season = $4';
-      params.push(season);
-    } else {
-      params.push('');
-    }
-
-    if (year) {
-      query += ' AND year = $5';
-      params.push(year);
-    } else {
-      params.push('');
-    }
-
-    const eventCount = await db.query(`SELECT COUNT(*) ${query};`, params);
-
-    query += ' ORDER BY title ASC LIMIT $6 OFFSET $7;';
-    params.push(limit);
-    params.push(offset);
-
-    const reqInfo = await db.query(`SELECT * ${query}`, params);
-
-    res.status(200).json(keysToCamel({ events: reqInfo, count: eventCount }));
+    const allInfo = await db.query(`SELECT * from catalog;`);
+    res.status(200).json(keysToCamel(allInfo));
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -86,10 +33,10 @@ catalogRouter.post('/', async (req, res) => {
     const returnedData = await db.query(
       `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location)
       VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id;`,
+      RETURNING id, year;`,
       [host, title, eventType, subject, description, year, season, location],
     );
-    res.status(201).json({ id: returnedData[0].id, status: 'Success' });
+    res.status(201).json({ id: returnedData[0].id, year: returnedData[0].year, status: 'Success' });
   } catch (err) {
     res.status(500).json({
       status: 'Failed',
