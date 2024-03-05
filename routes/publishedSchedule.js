@@ -183,6 +183,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
         WHERE
           D.event_date >= $1::date AND D.event_date <= $2::date
           AND D.id = PS.day_id
+        ORDER BY PS.start_time ASC
       )
       SELECT event_date,
       json_build_object (
