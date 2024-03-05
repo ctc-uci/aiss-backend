@@ -1,6 +1,6 @@
 const express = require('express');
 const { db } = require('../server/db');
-const { keysToCamel, calculateYear } = require('../common/utils');
+const { keysToCamel, calculateYear, getSeasonFromMonthAndYear } = require('../common/utils');
 
 const publishedScheduleRouter = express.Router();
 
@@ -96,30 +96,7 @@ publishedScheduleRouter.get('/all-seasons', async (req, res) => {
     const formattedDate = new Date(date.event_date);
     const year = formattedDate.getFullYear();
     const month = formattedDate.getMonth();
-    // const day = formattedDate.getDate();
-
-    // winter
-    // december (11) -> winter [year + 1]
-    // january (0) - february (1) -> winter [year]
-    if (month === 11) {
-      return `Winter ${year + 1}`;
-    }
-    if (month === 0 || month === 1) {
-      return `Winter ${year}`;
-    }
-    // spring
-    // march-may -> winter [year]
-    if (month >= 2 && month <= 4) {
-      return `Winter ${year}`;
-    }
-    // summer
-    // june-august -> summer [year]
-    if (month >= 5 && month <= 7) {
-      return `Summer ${year}`;
-    }
-    // fall
-    // september-november -> fall [year]
-    return `Fall ${year}`;
+    return getSeasonFromMonthAndYear(month, year);
   };
 
   try {
@@ -130,12 +107,20 @@ publishedScheduleRouter.get('/all-seasons', async (req, res) => {
           published_schedule AS PS, day AS D
         WHERE
           D.id = PS.day_id
+        ORDER BY
+          D.event_date DESC;
       `,
     );
-    const allSeasonsResult = allDatesResult.map((row) => {
-      return getSeason(row);
+    const allUniqueSeasonsResult = [];
+
+    // Get all unique seasons by order of season, from most recent to least
+    allDatesResult.forEach((row) => {
+      const season = getSeason(row);
+      if (!allUniqueSeasonsResult.includes(season)) {
+        allUniqueSeasonsResult.push(season);
+      }
     });
-    const allUniqueSeasonsResult = [...new Set(allSeasonsResult)];
+
     res.status(200).json(keysToCamel(allUniqueSeasonsResult));
   } catch (err) {
     res.status(500).send(err.message);
@@ -198,6 +183,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
         WHERE
           D.event_date >= $1::date AND D.event_date <= $2::date
           AND D.id = PS.day_id
+        ORDER BY PS.start_time ASC
       )
       SELECT event_date,
       json_build_object (

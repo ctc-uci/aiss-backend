@@ -85,4 +85,26 @@ const keysToCamel = (data) => {
   return data;
 };
 
-module.exports = { keysToCamel, isInteger, calculateYear };
+const getSeasonFromMonthAndYear = (month, year) => {
+  if (month === 11) {
+    return `Winter ${year + 1}`;
+  }
+  if (month === 0 || month === 1) {
+    return `Winter ${year}`;
+  }
+  // spring
+  // march-may -> winter [year]
+  if (month >= 2 && month <= 4) {
+    return `Winter ${year}`;
+  }
+  // summer
+  // june-august -> summer [year]
+  if (month >= 5 && month <= 7) {
+    return `Summer ${year}`;
+  }
+  // fall
+  // september-november -> fall [year]
+  return `Fall ${year}`;
+};
+
+module.exports = { keysToCamel, isInteger, calculateYear, getSeasonFromMonthAndYear };

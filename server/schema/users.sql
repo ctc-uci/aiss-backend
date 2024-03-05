@@ -1,4 +1,4 @@
-CREATE TYPE account_type as ENUM ('superadmin', 'admin');
+CREATE TYPE account_type as ENUM ('admin', 'student');
 
 DROP TABLE IF EXISTS users;
 
@@ -8,4 +8,6 @@ CREATE TABLE users (
 	type account_type NOT NULL, 
 	approved BOOLEAN NOT NULL,
 	approved_on DATE NOT NULL,
+	first_name VARCHAR(50) NOT NULL,
+	last_name VARCHAR(50) NOT NULL
 );
