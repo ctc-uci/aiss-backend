@@ -15,7 +15,8 @@ catalogRouter.get('/', async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let query = ' FROM catalog WHERE 1=1';
+    let query = 'FROM catalog WHERE 1=1';
+    // removed space at beginning here
 
     const params = [];
 
@@ -27,29 +28,41 @@ catalogRouter.get('/', async (req, res) => {
     }
 
     if (subject) {
-      query += ' AND subject = $2';
-      params.push(subject);
+      const array = subject.split(',');
+      query += ' AND subject = ANY($2::subject[])';
+      // for (let i = 0; i < array.length; i += 1) {
+      //   query += `'${array[i]}'`;
+      //   if (i < array.length - 1) {
+      //     query += ', ';
+      //   }
+      // }
+      // query += ')';
+      // query += ' AND subject = $2';
+      params.push(array);
     } else {
       params.push('');
     }
 
     if (eventType) {
-      query += ' AND event_type = $3';
-      params.push(eventType);
+      const array = eventType.split(',');
+      query += ' AND event_type = ANY($3::event[])';
+      params.push(array);
     } else {
       params.push('');
     }
 
     if (season) {
-      query += ' AND season = $4';
-      params.push(season);
+      const array = season.split(',');
+      query += ' AND season = ANY($4::season[])';
+      params.push(array);
     } else {
       params.push('');
     }
 
     if (year) {
-      query += ' AND year = $5';
-      params.push(year);
+      const array = year.split(',');
+      query += ' AND year = ANY($5::year[])';
+      params.push(array);
     } else {
       params.push('');
     }
