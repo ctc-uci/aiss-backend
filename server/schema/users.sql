@@ -1,4 +1,4 @@
-CREATE TYPE account_type as ENUM ('superadmin', 'admin');
+CREATE TYPE account_type as ENUM ('admin', 'student');
 
 DROP TABLE IF EXISTS users;
 
