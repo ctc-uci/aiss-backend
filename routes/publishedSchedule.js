@@ -111,7 +111,7 @@ publishedScheduleRouter.get('/all-seasons', async (req, res) => {
     // spring
     // march-may -> winter [year]
     if (month >= 2 && month <= 4) {
-      return `Winter ${year}`;
+      return `Spring ${year}`;
     }
     // summer
     // june-august -> summer [year]
