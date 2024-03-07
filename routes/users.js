@@ -17,7 +17,20 @@ userRouter.get('/', async (req, res) => {
 
 userRouter.get('/pending-accounts', async (req, res) => {
   try {
-    const pendingAccounts = await db.query(`SELECT * FROM users WHERE approved = FALSE;`);
+    const pendingAccounts = await db.query(
+      `SELECT * FROM users WHERE approved = FALSE ORDER BY first_name ASC;`,
+    );
+    res.status(200).json(keysToCamel(pendingAccounts));
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+userRouter.get('/approved-accounts', async (req, res) => {
+  try {
+    const pendingAccounts = await db.query(
+      `SELECT * FROM users WHERE approved = TRUE ORDER BY first_name ASC;`,
+    );
     res.status(200).json(keysToCamel(pendingAccounts));
   } catch (err) {
     res.status(500).send(err.message);
