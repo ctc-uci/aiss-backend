@@ -153,9 +153,97 @@ catalogRouter.put('/:id', async (req, res) => {
 catalogRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const delUser = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
-    res.status(200).send(keysToCamel(delUser));
+    // Must delete from published event first and then catalog because of foreign key constraint
+    // We also need to update the day table if the event we're deleting is part of a day
+    // Since we're making multiple queries, we need to ensure that if any query fails, we revert all the queries before it
+    // We do this by using transactions (BEGIN, COMMIT, ROLLBACK)
+
+    await db.query('BEGIN;');
+
+    // Get the published event we're deleting if it exists
+    // Expecting to only return 1 row because only one published schedule can correlate to catalog event
+    // Event ids currently are not set as unique in the schema but we will assume they are for now
+    const publishedEvents = await db.query(
+      `SELECT * FROM published_schedule WHERE event_id = $1;`,
+      id,
+    );
+
+    // Delete from published schedule
+    await db.query(`DELETE FROM published_schedule WHERE event_id = $1;`, [id]);
+
+    // Delete from catalog
+    const delCatalog = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
+
+    // Handle modifying day table if necessary
+    if (publishedEvents.length > 0) {
+      // Iterate through all published events............. 112, 133, 132, 113
+      // published event id 112 has catalog id 80
+      // published event id 133 has catalog id 80
+
+      // so when we deleted catalog id 80, we only deleted 112
+      // but now we have a lingering 133 that we need to delete
+      // along with accounting for the day it could be affecting
+      // we need to now manually delete and edit database bc we cant do this w code
+
+      // and looping through all published events may not be possible because of deadlock
+      // lets say we have 2 published events associated with a catalog event,
+      // we delete the first one (first event of the day) and then modify day
+      // we delete the second one (last event of the day) and then modify day
+      // deadlock can occur because we are modifying the same row in the day table within the same transaction
+
+      // can be fixed by not allowing multiple published events to be associated with the same catalog event (add unique in schema)
+
+      console.log(publishedEvents);
+      const publishedEvent = publishedEvents[0];
+
+      const dayId = publishedEvent.day_id;
+      const publishedEventStartTime = publishedEvent.start_time;
+      const publishedEventEndTime = publishedEvent.end_time;
+
+      // Query for day corresponding to the published schedule
+      const day = await db.query(`SELECT * FROM day WHERE id = $1;`, [dayId]);
+
+      const dayStartTime = day.start_time;
+      const dayEndTime = day.end_time;
+
+      // If the event we're deleting is the only event for the day, delete the day
+      if (publishedEventStartTime === dayStartTime && publishedEventEndTime === dayEndTime) {
+        await db.query(`DELETE FROM day WHERE id = $1;`, [dayId]);
+      } else {
+        // Decrement day count by 1
+        await db.query(`UPDATE day SET day_count = day_count - 1 WHERE id = $1;`, [dayId]);
+
+        // If the event we're deleting is the first/last event for the day, update the day start/end time
+        if (publishedEventStartTime === dayStartTime) {
+          const nextEvent = await db.query(
+            `SELECT * FROM published_schedule WHERE day_id = $1 ORDER BY start_time ASC LIMIT 1;`,
+            [dayId],
+          );
+          // Guaranteed to have a next event since day end time is not the same as event end time
+          const nextEventStartTime = nextEvent[0].start_time;
+          await db.query(`UPDATE day SET start_time = $1 WHERE id = $2;`, [
+            nextEventStartTime,
+            dayId,
+          ]);
+        } else if (publishedEventEndTime === dayEndTime) {
+          const prevEvent = await db.query(
+            `SELECT * FROM published_schedule WHERE day_id = $1 ORDER BY end_time DESC LIMIT 1;`,
+            [dayId],
+          );
+
+          // Guaranteed to have a next event since day start time is not the same as event start time
+          const prevEventEndTime = prevEvent[0].end_time;
+          await db.query(`UPDATE day SET end_time = $1 WHERE id = $2;`, [prevEventEndTime, dayId]);
+        }
+      }
+    }
+
+    // Signals to db to run all these commands, if any fail, it will rollback all of the rows to their previous state
+    await db.query('COMMIT;');
+
+    res.status(200).send(keysToCamel(delCatalog));
   } catch (err) {
+    await db.query('ROLLBACK;');
     res.status(500).send(err.message);
   }
 });
