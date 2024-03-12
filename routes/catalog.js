@@ -15,7 +15,7 @@ catalogRouter.get('/', async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let query = 'FROM catalog WHERE 1=1';
+    let query = 'FROM catalog WHERE 1=1 AND hidden = false';
     // removed space at beginning here
 
     const params = [];
@@ -85,7 +85,9 @@ catalogRouter.get('/', async (req, res) => {
 catalogRouter.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1;`, [id]);
+    const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1 AND hidden = false;`, [
+      id,
+    ]);
     res.status(200).json(keysToCamel(allUsers));
   } catch (err) {
     res.status(500).send(err.message);
@@ -97,8 +99,8 @@ catalogRouter.post('/', async (req, res) => {
   const { host, title, eventType, subject, description, year, season, location } = req.body;
   try {
     const returnedData = await db.query(
-      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location)
-      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location, hidden)
+      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8, false)
       RETURNING id;`,
       [host, title, eventType, subject, description, year, season, location],
     );
@@ -153,8 +155,14 @@ catalogRouter.put('/:id', async (req, res) => {
 catalogRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const delUser = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
-    res.status(200).send(keysToCamel(delUser));
+    const inUse = await db.query(`SELECT * FROM published_schedule WHERE event_id = $1;`, [id]);
+    let hidden;
+    if (inUse && inUse.length) {
+      hidden = await db.query(`UPDATE catalog SET hidden = true WHERE id = $1 RETURNING *;`, [id]);
+    } else {
+      hidden = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
+    }
+    res.status(200).send(keysToCamel(hidden));
   } catch (err) {
     res.status(500).send(err.message);
   }
