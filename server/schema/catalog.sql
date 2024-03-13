@@ -13,5 +13,6 @@ CREATE TABLE catalog (
   description VARCHAR(50) NOT NULL,
   year year NOT NULL,
   season season,
-  location VARCHAR(256)
+  location VARCHAR(256),
+  hidden boolean NOT NULL
 );
