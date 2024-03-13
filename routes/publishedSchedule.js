@@ -394,7 +394,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         start_time = COALESCE($5, start_time),
         end_time = COALESCE($6, end_time),
         cohort = COALESCE($7, cohort),
-        notes = COALESCE($8, notes)
+        notes = COALESCE($8, notes),
         created_on = COALESCE($9, created_on)
 
       WHERE id = $10
