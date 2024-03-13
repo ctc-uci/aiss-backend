@@ -160,6 +160,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       (
         SELECT
           PS.id,
+          PS.event_id,
           PS.day_id,
           D.id AS day_day_id,
           D.event_date,
@@ -197,6 +198,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       JSON_AGG(
         json_build_object (
           'id', seasonPS.id,
+          'event_id', seasonPS.event_id,
           'title', seasonPS.title,
           'event_type', seasonPS.event_type,
           'year', seasonPS.year,
