@@ -8,11 +8,10 @@ CREATE TABLE catalog (
   id SERIAL PRIMARY KEY,
   host VARCHAR(50) NOT NULL,
   title VARCHAR(50) NOT NULL,
-  event_type event NOT NULL,
-  subject subject NOT NULL,
+  event_type event[] NOT NULL,
+  subject subject[] NOT NULL,
   description VARCHAR(50) NOT NULL,
   year year NOT NULL,
   season season,
-  location VARCHAR(256),
   hidden boolean NOT NULL
 );
