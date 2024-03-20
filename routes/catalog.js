@@ -95,10 +95,11 @@ catalogRouter.get('/:id', async (req, res) => {
 // -- POST - Adds a new row to the catalog table
 catalogRouter.post('/', async (req, res) => {
   const { host, title, eventType, subject, description, year, season, location } = req.body;
+
   try {
     const returnedData = await db.query(
-      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location)
-      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location, hidden)
+      VALUES (nextval('catalog_id_seq'), $1, $2, $3::event[], $4::subject[], $5, $6::year[], $7::season[], $8, false)
       RETURNING id;`,
       [host, title, eventType, subject, description, year, season, location],
     );
