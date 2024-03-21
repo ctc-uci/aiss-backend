@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS published_schedule (
     FOREIGN KEY (event_id)
         REFERENCES catalog (id),
     FOREIGN KEY (day_id)
-        REFERENCES day (id)
+        REFERENCES day (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_day_id ON published_schedule (day_id);

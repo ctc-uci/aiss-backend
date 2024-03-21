@@ -15,7 +15,7 @@ catalogRouter.get('/', async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let query = 'FROM catalog WHERE 1=1';
+    let query = 'FROM catalog WHERE 1=1 AND hidden = false';
     // removed space at beginning here
 
     const params = [];
@@ -85,7 +85,9 @@ catalogRouter.get('/', async (req, res) => {
 catalogRouter.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1;`, [id]);
+    const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1 AND hidden = false;`, [
+      id,
+    ]);
     res.status(200).json(keysToCamel(allUsers));
   } catch (err) {
     res.status(500).send(err.message);
@@ -94,13 +96,13 @@ catalogRouter.get('/:id', async (req, res) => {
 
 // -- POST - Adds a new row to the catalog table
 catalogRouter.post('/', async (req, res) => {
-  const { host, title, eventType, subject, description, year, season, location } = req.body;
+  const { host, title, eventType, subject, description, year, season } = req.body;
   try {
     const returnedData = await db.query(
-      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, location)
-      VALUES (nextval('catalog_id_seq'), $1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, hidden)
+      VALUES (nextval('catalog_id_seq'), $1, $2, $3::event[], $4::subject[], $5, $6::year[], $7::season[], false)
       RETURNING id;`,
-      [host, title, eventType, subject, description, year, season, location],
+      [host, title, eventType, subject, description, year, season],
     );
     res.status(201).json({ id: returnedData[0].id, status: 'Success' });
   } catch (err) {
@@ -116,18 +118,17 @@ catalogRouter.post('/', async (req, res) => {
 catalogRouter.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { host, title, eventType, subject, description, year, location, season } = req.body;
+    const { host, title, eventType, subject, description, year, season } = req.body;
 
     const updatedCatalog = await db.query(
       `UPDATE catalog SET
        ${host ? 'host = $(host), ' : ''}
        ${title ? 'title = $(title),' : ''}
-       ${eventType ? 'event_type = $(eventType), ' : ''}
-       ${subject ? 'subject = $(subject), ' : ''}
+       ${eventType ? 'event_type = $(eventType)::event[], ' : ''}
+       ${subject ? 'subject = $(subject)::subject[], ' : ''}
        ${description ? 'description = $(description), ' : ''}
-       ${year ? 'year = $(year), ' : ''}
-       ${location ? 'location = $(location), ' : ''}
-       ${season ? 'season = $(season), ' : ''}
+       ${year ? 'year = $(year)::year[], ' : ''}
+       ${season ? 'season = $(season)::season[], ' : ''}
        id = '${id}'
         WHERE id = '${id}'
         RETURNING *;`,
@@ -139,7 +140,6 @@ catalogRouter.put('/:id', async (req, res) => {
         description,
         year,
         id,
-        location,
         season,
       },
     );
@@ -153,8 +153,14 @@ catalogRouter.put('/:id', async (req, res) => {
 catalogRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const delUser = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
-    res.status(200).send(keysToCamel(delUser));
+    const inUse = await db.query(`SELECT * FROM published_schedule WHERE event_id = $1;`, [id]);
+    let hidden;
+    if (inUse && inUse.length) {
+      hidden = await db.query(`UPDATE catalog SET hidden = true WHERE id = $1 RETURNING *;`, [id]);
+    } else {
+      hidden = await db.query(`DELETE FROM catalog WHERE id = $1 RETURNING *;`, [id]);
+    }
+    res.status(200).send(keysToCamel(hidden));
   } catch (err) {
     res.status(500).send(err.message);
   }
