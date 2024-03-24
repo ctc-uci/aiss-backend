@@ -27,28 +27,33 @@ const isInteger = (value) => {
 
 // dependency for publishedSchedule.js
 const calculateYear = (eventDate, gradeLevel) => {
-  if (gradeLevel && gradeLevel.length) {
-    const currentDay = new Date(eventDate);
+  const currentDay = new Date(eventDate);
+  if (gradeLevel && gradeLevel.length === 1) {
     // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
-    if (gradeLevel.toLowerCase() === 'junior') {
+    if (gradeLevel[0].toLowerCase() === 'junior') {
       // if the current month is august or later
       // then junior will be current year + 2
       // otherwise junior will be current year + 1
       // months are zero indexed
       return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10)];
     }
-    if (gradeLevel.toLowerCase() === 'senior') {
+    if (gradeLevel[0].toLowerCase() === 'senior') {
       // if the current month is august or later
       // then senior will be current year + 1
       // otherwise senior will be current year
       return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10)];
     }
-    if (gradeLevel.toLowerCase() === 'both') {
+    if (gradeLevel[0].toLowerCase() === 'both') {
       return [
         (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
         (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
       ];
     }
+  } else if (gradeLevel && gradeLevel.length > 1) {
+    return [
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
+    ];
   }
   return [];
 };

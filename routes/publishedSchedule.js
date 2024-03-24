@@ -303,7 +303,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 // as that is how we are able to calculate the cohort from the event date
 publishedScheduleRouter.post('/', async (req, res) => {
   const currDate = new Date();
-  const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const { eventId, dayId, confirmed, startTime, endTime, cohort, notes } = req.body;
   try {
     const dayResult = await db.query(
       `UPDATE day SET day_count = day_count + 1 WHERE id = $1 RETURNING *;`,
@@ -342,7 +342,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
         eventId,
         dayId,
         confirmed,
-        confirmedOn,
+        new Date(),
         startTime,
         endTime,
         calculateYear(eventDate, cohort),
