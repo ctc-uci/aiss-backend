@@ -27,7 +27,7 @@ const isInteger = (value) => {
 
 // dependency for publishedSchedule.js
 const calculateYear = (eventDate, gradeLevel) => {
-  if (gradeLevel) {
+  if (gradeLevel && gradeLevel.length) {
     const currentDay = new Date(eventDate);
     // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
     if (gradeLevel.toLowerCase() === 'junior') {

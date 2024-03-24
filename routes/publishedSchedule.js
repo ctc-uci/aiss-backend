@@ -160,6 +160,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       (
         SELECT
           PS.id,
+          PS.event_id,
           PS.day_id,
           D.id AS day_day_id,
           D.event_date,
@@ -197,6 +198,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
       JSON_AGG(
         json_build_object (
           'id', seasonPS.id,
+          'event_id', seasonPS.event_id,
           'title', seasonPS.title,
           'event_type', seasonPS.event_type,
           'year', seasonPS.year,
@@ -394,7 +396,7 @@ publishedScheduleRouter.put('/:id', async (req, res) => {
         start_time = COALESCE($5, start_time),
         end_time = COALESCE($6, end_time),
         cohort = COALESCE($7, cohort),
-        notes = COALESCE($8, notes)
+        notes = COALESCE($8, notes),
         created_on = COALESCE($9, created_on)
 
       WHERE id = $10
