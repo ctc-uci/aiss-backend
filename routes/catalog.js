@@ -115,12 +115,12 @@ catalogRouter.put('/:id', async (req, res) => {
       `UPDATE catalog SET
        ${host ? 'host = $(host), ' : ''}
        ${title ? 'title = $(title),' : ''}
-       ${eventType ? 'event_type = $(eventType), ' : ''}
-       ${subject ? 'subject = $(subject), ' : ''}
+       ${eventType ? 'event_type = $(eventType)::event[], ' : ''}
+       ${subject ? 'subject = $(subject)::subject[], ' : ''}
        ${description ? 'description = $(description), ' : ''}
-       ${year ? 'year = $(year), ' : ''}
+       ${year ? 'year = $(year)::year[], ' : ''}
        ${location ? 'location = $(location), ' : ''}
-       ${season ? 'season = $(season), ' : ''}
+       ${season ? 'season = $(season)::season[], ' : ''}
        id = '${id}'
         WHERE id = '${id}'
         RETURNING *;`,
