@@ -223,9 +223,10 @@ publishedScheduleRouter.get('/season', async (req, res) => {
 });
 
 // GET /published-schedule/date - returns all events occurring on a specific date
-publishedScheduleRouter.get('/date', async (req, res) => {
+publishedScheduleRouter.get('/dayId', async (req, res) => {
   try {
-    const { date } = req.query;
+    const { dayId } = req.query;
+
     const seasonResult = await db.query(
       `
       SELECT
@@ -255,12 +256,13 @@ publishedScheduleRouter.get('/date', async (req, res) => {
       FROM day D
       LEFT JOIN published_schedule PS ON PS.day_id = D.id
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE D.event_date = $1::date
+      WHERE D.id = $1
       GROUP BY d.event_date, d.id
       ORDER BY d.event_date;
       `,
-      [date],
+      [dayId],
     );
+    // console.log(seasonResult[0]);
     res.status(200).json(keysToCamel(seasonResult)[0]);
   } catch (err) {
     res.status(500).send(err.message);
