@@ -247,6 +247,7 @@ publishedScheduleRouter.get('/dayId', async (req, res) => {
             'title', C.title,
             'event_type', C.event_type,
             'year', C.year,
+            'host', C.host,
             'start_time', PS.start_time,
             'end_time', PS.end_time,
             'confirmed', PS.confirmed,
