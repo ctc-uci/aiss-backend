@@ -72,7 +72,8 @@ const keysToCamel = (data) => {
     });
     return newData;
   }
-  if (isArray(data)) {
+  if (isArray(data) && data.length) {
+    // console.log(data)
     return data.map((i) => {
       return keysToCamel(i);
     });
@@ -83,9 +84,12 @@ const keysToCamel = (data) => {
     data[0] === '{' &&
     data[data.length - 1] === '}'
   ) {
-    let parsedList = data.replaceAll('"', '');
-    parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
-    return parsedList;
+    if (data.length > 2) {
+      let parsedList = data.replaceAll('"', '');
+      parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
+      return parsedList;
+    }
+    return [];
   }
   return data;
 };
