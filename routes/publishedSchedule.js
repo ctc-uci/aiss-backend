@@ -265,7 +265,17 @@ publishedScheduleRouter.get('/dayId', async (req, res) => {
       `,
       [dayId],
     );
-    // console.log(seasonResult[0]);
+
+    seasonResult[0].data.sort((a, b) => {
+      if (a.start_time < b.start_time) {
+        return -1;
+      }
+      if (a.start_time > b.start_time) {
+        return 1;
+      }
+      return 0;
+    });
+
     res.status(200).json(keysToCamel(seasonResult)[0]);
   } catch (err) {
     res.status(500).send(err.message);
