@@ -29,15 +29,7 @@ catalogRouter.get('/', async (req, res) => {
 
     if (subject) {
       const array = subject.split(',');
-      query += ' AND subject = ANY($2::subject[])';
-      // for (let i = 0; i < array.length; i += 1) {
-      //   query += `'${array[i]}'`;
-      //   if (i < array.length - 1) {
-      //     query += ', ';
-      //   }
-      // }
-      // query += ')';
-      // query += ' AND subject = $2';
+      query += ' AND subject && $2::subject[]';
       params.push(array);
     } else {
       params.push('');
@@ -45,7 +37,7 @@ catalogRouter.get('/', async (req, res) => {
 
     if (eventType) {
       const array = eventType.split(',');
-      query += ' AND event_type = ANY($3::event[])';
+      query += ' AND event_type && $3::event[]';
       params.push(array);
     } else {
       params.push('');
@@ -53,7 +45,7 @@ catalogRouter.get('/', async (req, res) => {
 
     if (season) {
       const array = season.split(',');
-      query += ' AND season = ANY($4::season[])';
+      query += ' AND season && $4::season[]';
       params.push(array);
     } else {
       params.push('');
@@ -61,7 +53,7 @@ catalogRouter.get('/', async (req, res) => {
 
     if (year) {
       const array = year.split(',');
-      query += ' AND year = ANY($5::year[])';
+      query += ' AND year && $5::year[]';
       params.push(array);
     } else {
       params.push('');
