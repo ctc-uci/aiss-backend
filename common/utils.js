@@ -95,16 +95,10 @@ const keysToCamel = (data) => {
 };
 
 const getSeasonFromMonthAndYear = (month, year) => {
-  if (month === 11) {
-    return `Winter ${year + 1}`;
-  }
-  if (month === 0 || month === 1) {
-    return `Winter ${year}`;
-  }
   // spring
   // march-may -> winter [year]
-  if (month >= 2 && month <= 4) {
-    return `Winter ${year}`;
+  if (month >= 0 && month <= 4) {
+    return `Spring ${year}`;
   }
   // summer
   // june-august -> summer [year]

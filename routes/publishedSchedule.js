@@ -136,22 +136,15 @@ publishedScheduleRouter.get('/season', async (req, res) => {
     const { season, year } = req.query;
 
     // getting the intervals for each season
-    if (season.toLowerCase() === 'winter') {
-      startTime = `${year - 1}-12-01`;
-      if ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) {
-        endTime = `${year}-02-29`;
-      } else {
-        endTime = `${year}-02-28`;
-      }
-    } else if (season.toLowerCase() === 'spring') {
-      startTime = `${year}-03-01`;
+    if (season.toLowerCase() === 'spring') {
+      startTime = `${year}-01-01`;
       endTime = `${year}-05-31`;
     } else if (season.toLowerCase() === 'summer') {
       startTime = `${year}-06-01`;
       endTime = `${year}-08-31`;
     } else {
       startTime = `${year}-09-01`;
-      endTime = `${year}-11-30`;
+      endTime = `${year}-12-31`;
     }
 
     const seasonResult = await db.query(
