@@ -284,11 +284,13 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       SELECT
         PS.id,
         PS.day_id,
+        PS.event_id,
         C.host,
         C.title,
         C.event_type,
         C.season,
         C.subject,
+        C.year,
         C.description,
         PS.confirmed,
         PS.confirmed_on,
