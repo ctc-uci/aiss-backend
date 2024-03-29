@@ -40,6 +40,15 @@ dayRouter.get('/:id', async (req, res) => {
 dayRouter.post('/', async (req, res) => {
   try {
     const { eventDate, location, notes } = req.body;
+    const inUse = await db.query(`SELECT * FROM day WHERE event_date = $1;`, [eventDate]);
+    if (inUse.length) {
+      res.status(201).json({
+        status: 'Failed',
+        message: 'Day already exists',
+      });
+      return;
+    }
+
     const newDay = await db.query(
       `
       INSERT INTO day (

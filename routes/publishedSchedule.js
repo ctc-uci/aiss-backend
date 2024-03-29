@@ -136,22 +136,15 @@ publishedScheduleRouter.get('/season', async (req, res) => {
     const { season, year } = req.query;
 
     // getting the intervals for each season
-    if (season.toLowerCase() === 'winter') {
-      startTime = `${year - 1}-12-01`;
-      if ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) {
-        endTime = `${year}-02-29`;
-      } else {
-        endTime = `${year}-02-28`;
-      }
-    } else if (season.toLowerCase() === 'spring') {
-      startTime = `${year}-03-01`;
+    if (season.toLowerCase() === 'spring') {
+      startTime = `${year}-01-01`;
       endTime = `${year}-05-31`;
     } else if (season.toLowerCase() === 'summer') {
       startTime = `${year}-06-01`;
       endTime = `${year}-08-31`;
     } else {
       startTime = `${year}-09-01`;
-      endTime = `${year}-11-30`;
+      endTime = `${year}-12-31`;
     }
 
     const seasonResult = await db.query(
@@ -171,6 +164,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           C.title,
           C.event_type,
           C.year,
+          C.description,
           PS.start_time,
           PS.end_time,
           PS.confirmed,
@@ -200,6 +194,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           'id', seasonPS.id,
           'event_id', seasonPS.event_id,
           'title', seasonPS.title,
+          'description', seasonPS.description,
           'event_type', seasonPS.event_type,
           'year', seasonPS.year,
           'start_time', seasonPS.start_time,
@@ -223,9 +218,10 @@ publishedScheduleRouter.get('/season', async (req, res) => {
 });
 
 // GET /published-schedule/date - returns all events occurring on a specific date
-publishedScheduleRouter.get('/date', async (req, res) => {
+publishedScheduleRouter.get('/dayId', async (req, res) => {
   try {
-    const { date } = req.query;
+    const { dayId } = req.query;
+
     const seasonResult = await db.query(
       `
       SELECT
@@ -244,6 +240,7 @@ publishedScheduleRouter.get('/date', async (req, res) => {
             'title', C.title,
             'event_type', C.event_type,
             'year', C.year,
+            'host', C.host,
             'start_time', PS.start_time,
             'end_time', PS.end_time,
             'confirmed', PS.confirmed,
@@ -255,12 +252,23 @@ publishedScheduleRouter.get('/date', async (req, res) => {
       FROM day D
       LEFT JOIN published_schedule PS ON PS.day_id = D.id
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE D.event_date = $1::date
+      WHERE D.id = $1
       GROUP BY d.event_date, d.id
       ORDER BY d.event_date;
       `,
-      [date],
+      [dayId],
     );
+
+    seasonResult[0].data.sort((a, b) => {
+      if (a.start_time < b.start_time) {
+        return -1;
+      }
+      if (a.start_time > b.start_time) {
+        return 1;
+      }
+      return 0;
+    });
+
     res.status(200).json(keysToCamel(seasonResult)[0]);
   } catch (err) {
     res.status(500).send(err.message);
@@ -276,8 +284,14 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
       SELECT
         PS.id,
         PS.day_id,
+        PS.event_id,
         C.host,
         C.title,
+        C.event_type,
+        C.season,
+        C.subject,
+        C.year,
+        C.description,
         PS.confirmed,
         PS.confirmed_on,
         PS.start_time,
@@ -303,7 +317,7 @@ publishedScheduleRouter.get('/:id', async (req, res) => {
 // as that is how we are able to calculate the cohort from the event date
 publishedScheduleRouter.post('/', async (req, res) => {
   const currDate = new Date();
-  const { eventId, dayId, confirmed, confirmedOn, startTime, endTime, cohort, notes } = req.body;
+  const { eventId, dayId, confirmed, startTime, endTime, cohort, notes } = req.body;
   try {
     const dayResult = await db.query(
       `UPDATE day SET day_count = day_count + 1 WHERE id = $1 RETURNING *;`,
@@ -342,7 +356,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
         eventId,
         dayId,
         confirmed,
-        confirmedOn,
+        new Date(),
         startTime,
         endTime,
         calculateYear(eventDate, cohort),

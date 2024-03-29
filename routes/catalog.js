@@ -77,10 +77,8 @@ catalogRouter.get('/', async (req, res) => {
 catalogRouter.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const allUsers = await db.query(`SELECT * FROM catalog WHERE id = $1 AND hidden = false;`, [
-      id,
-    ]);
-    res.status(200).json(keysToCamel(allUsers));
+    const response = await db.query(`SELECT * FROM catalog WHERE id = $1;`, [id]);
+    res.status(200).json(keysToCamel(response));
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -112,30 +110,44 @@ catalogRouter.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { host, title, eventType, subject, description, year, season } = req.body;
 
-    const updatedCatalog = await db.query(
-      `UPDATE catalog SET
-       ${host ? 'host = $(host), ' : ''}
-       ${title ? 'title = $(title),' : ''}
-       ${eventType ? 'event_type = $(eventType)::event[], ' : ''}
-       ${subject ? 'subject = $(subject)::subject[], ' : ''}
-       ${description ? 'description = $(description), ' : ''}
-       ${year ? 'year = $(year)::year[], ' : ''}
-       ${season ? 'season = $(season)::season[], ' : ''}
-       id = '${id}'
-        WHERE id = '${id}'
+    const { count } = (
+      await db.query(`SELECT COUNT(*) FROM published_schedule WHERE event_id = $1;`, [id])
+    )[0];
+
+    if (count === 1) {
+      const updatedCatalog = await db.query(
+        `UPDATE catalog SET
+        ${host ? 'host = $(host), ' : ''}
+        ${title ? 'title = $(title),' : ''}
+        ${eventType ? 'event_type = $(eventType)::event[], ' : ''}
+        ${subject ? 'subject = $(subject)::subject[], ' : ''}
+        ${description ? 'description = $(description), ' : ''}
+        ${year ? 'year = $(year)::year[], ' : ''}
+        ${season ? 'season = $(season)::season[], ' : ''}
+        id = '${id}'
+          WHERE id = '${id}'
+          RETURNING *;`,
+        {
+          host,
+          title,
+          eventType,
+          subject,
+          description,
+          year,
+          id,
+          season,
+        },
+      );
+      res.status(200).send(keysToCamel(updatedCatalog));
+    } else {
+      const newCatalogEvent = await db.query(
+        `INSERT INTO catalog (id, host, title, event_type, subject, description, year, season, hidden)
+        VALUES (nextval('catalog_id_seq'), $1, $2, $3::event[], $4::subject[], $5, $6::year[], $7::season[], false)
         RETURNING *;`,
-      {
-        host,
-        title,
-        eventType,
-        subject,
-        description,
-        year,
-        id,
-        season,
-      },
-    );
-    res.status(200).send(keysToCamel(updatedCatalog));
+        [host, title, eventType, subject, description, year, season],
+      );
+      res.status(200).send(keysToCamel(newCatalogEvent));
+    }
   } catch (err) {
     res.status(500).send(err.message);
   }

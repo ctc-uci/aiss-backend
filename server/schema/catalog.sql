@@ -1,7 +1,7 @@
 CREATE TYPE event AS ENUM ('guest speaker', 'study-trip', 'workshop', 'other');
 CREATE TYPE subject AS ENUM ('life skills', 'science', 'technology', 'engineering', 'math', 'college readiness');
 CREATE TYPE year AS ENUM ('junior', 'senior', 'both');
-CREATE TYPE season AS ENUM ('spring', 'summer', 'fall', 'winter');
+CREATE TYPE season AS ENUM ('spring', 'summer', 'fall');
 
 DROP TABLE IF EXISTS catalog;
 CREATE TABLE catalog (

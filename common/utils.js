@@ -27,28 +27,33 @@ const isInteger = (value) => {
 
 // dependency for publishedSchedule.js
 const calculateYear = (eventDate, gradeLevel) => {
-  if (gradeLevel && gradeLevel.length) {
-    const currentDay = new Date(eventDate);
+  const currentDay = new Date(eventDate);
+  if (gradeLevel && gradeLevel.length === 1) {
     // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
-    if (gradeLevel.toLowerCase() === 'junior') {
+    if (gradeLevel[0].toLowerCase() === 'junior') {
       // if the current month is august or later
       // then junior will be current year + 2
       // otherwise junior will be current year + 1
       // months are zero indexed
       return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10)];
     }
-    if (gradeLevel.toLowerCase() === 'senior') {
+    if (gradeLevel[0].toLowerCase() === 'senior') {
       // if the current month is august or later
       // then senior will be current year + 1
       // otherwise senior will be current year
       return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10)];
     }
-    if (gradeLevel.toLowerCase() === 'both') {
+    if (gradeLevel[0].toLowerCase() === 'both') {
       return [
         (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
         (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
       ];
     }
+  } else if (gradeLevel && gradeLevel.length > 1) {
+    return [
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
+    ];
   }
   return [];
 };
@@ -67,7 +72,8 @@ const keysToCamel = (data) => {
     });
     return newData;
   }
-  if (isArray(data)) {
+  if (isArray(data) && data.length) {
+    // console.log(data)
     return data.map((i) => {
       return keysToCamel(i);
     });
@@ -78,24 +84,21 @@ const keysToCamel = (data) => {
     data[0] === '{' &&
     data[data.length - 1] === '}'
   ) {
-    let parsedList = data.replaceAll('"', '');
-    parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
-    return parsedList;
+    if (data.length > 2) {
+      let parsedList = data.replaceAll('"', '');
+      parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
+      return parsedList;
+    }
+    return [];
   }
   return data;
 };
 
 const getSeasonFromMonthAndYear = (month, year) => {
-  if (month === 11) {
-    return `Winter ${year + 1}`;
-  }
-  if (month === 0 || month === 1) {
-    return `Winter ${year}`;
-  }
   // spring
   // march-may -> winter [year]
-  if (month >= 2 && month <= 4) {
-    return `Winter ${year}`;
+  if (month >= 0 && month <= 4) {
+    return `Spring ${year}`;
   }
   // summer
   // june-august -> summer [year]
