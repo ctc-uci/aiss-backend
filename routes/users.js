@@ -1,5 +1,5 @@
 const express = require('express');
-const { keysToCamel } = require('../common/utils');
+const { keysToCamel, isInteger } = require('../common/utils');
 const { db } = require('../server/db');
 
 const userRouter = express.Router();
@@ -28,10 +28,23 @@ userRouter.get('/pending-accounts', async (req, res) => {
 
 userRouter.get('/approved-accounts', async (req, res) => {
   try {
-    const pendingAccounts = await db.query(
-      `SELECT * FROM users WHERE approved = TRUE ORDER BY first_name ASC;`,
-    );
-    res.status(200).json(keysToCamel(pendingAccounts));
+    const { keyword } = req.query;
+    let { page, limit } = req.query;
+    page = isInteger(page) ? parseInt(page, 10) : 1;
+    limit = isInteger(limit) ? parseInt(limit, 10) : 10;
+    const offset = (page - 1) * limit;
+    if (keyword) {
+      const userSearchResult = await db.query(
+        `SELECT * FROM users WHERE approved = TRUE AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4) ORDER BY first_name ASC LIMIT $5 OFFSET $6;`,
+        [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset],
+      );
+      res.status(200).json(keysToCamel(userSearchResult));
+    } else {
+      const approvedAccounts = await db.query(
+        `SELECT * FROM users WHERE approved = TRUE ORDER BY first_name ASC;`,
+      );
+      res.status(200).json(keysToCamel(approvedAccounts));
+    }
   } catch (err) {
     res.status(500).send(err.message);
   }
