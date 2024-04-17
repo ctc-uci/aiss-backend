@@ -28,23 +28,34 @@ userRouter.get('/pending-accounts', async (req, res) => {
 
 userRouter.get('/approved-accounts', async (req, res) => {
   try {
-    const { keyword } = req.query;
+    const { keyword, accountType } = req.query;
     let { page, limit } = req.query;
     page = isInteger(page) ? parseInt(page, 10) : 1;
     limit = isInteger(limit) ? parseInt(limit, 10) : 10;
     const offset = (page - 1) * limit;
-    if (keyword) {
-      const userSearchResult = await db.query(
-        `SELECT * FROM users WHERE approved = TRUE AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4) ORDER BY first_name ASC LIMIT $5 OFFSET $6;`,
-        [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset],
-      );
-      res.status(200).json(keysToCamel(userSearchResult));
-    } else {
-      const approvedAccounts = await db.query(
-        `SELECT * FROM users WHERE approved = TRUE ORDER BY first_name ASC;`,
-      );
-      res.status(200).json(keysToCamel(approvedAccounts));
+    let queryString = 'FROM users WHERE approved = TRUE ';
+    if (accountType === 'admin') {
+      queryString += `AND type = 'admin'`;
+    } else if (accountType === 'student') {
+      queryString += `AND type = 'student'`;
     }
+    let approvedAccounts;
+    let params = [];
+    if (keyword) {
+      params = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset];
+      approvedAccounts = await db.query(
+        `SELECT * ${queryString} AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4) ORDER BY first_name ASC LIMIT $5 OFFSET $6;`,
+        params,
+      );
+    } else {
+      params = [limit, offset];
+      approvedAccounts = await db.query(
+        `SELECT * ${queryString} ORDER BY first_name ASC LIMIT $1 OFFSET $2;`,
+        params,
+      );
+    }
+    const userCount = await db.query(`SELECT COUNT(*) ${queryString};`, params);
+    res.status(200).json(keysToCamel({ accounts: approvedAccounts, count: userCount }));
   } catch (err) {
     res.status(500).send(err.message);
   }
