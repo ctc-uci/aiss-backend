@@ -217,6 +217,47 @@ publishedScheduleRouter.get('/season', async (req, res) => {
   }
 });
 
+// GET /published-schedule/stats - returns stats of event types and subjects for a specific season
+publishedScheduleRouter.get('/stats', async (req, res) => {
+  try {
+    const { season } = req.query;
+
+    const statResult = await db.query(
+      `
+        WITH all_event_types AS (
+          SELECT DISTINCT unnest(event_type) AS event_type
+          FROM catalog
+      ),
+      all_subjects AS (
+          SELECT DISTINCT unnest(subject) AS subject
+          FROM catalog
+      )
+      SELECT 
+          COALESCE(aet.event_type::text, 'Total') AS event_type,
+          COALESCE(asu.subject::text, 'Total') AS subject,
+          COALESCE(COUNT(c.id), 0) AS total_count
+      FROM all_event_types aet
+      CROSS JOIN all_subjects asu
+      LEFT JOIN (
+          SELECT *
+          FROM catalog
+          WHERE $1 = ANY(season)
+      ) c ON aet.event_type = ANY(c.event_type) AND asu.subject = ANY(c.subject)
+      GROUP BY ROLLUP (aet.event_type), ROLLUP (asu.subject)
+      ORDER BY CASE WHEN aet.event_type IS NULL THEN 1 ELSE 0 END,
+              CASE WHEN asu.subject IS NULL THEN 1 ELSE 0 END,
+              aet.event_type NULLS FIRST,
+             asu.subject NULLS FIRST;    
+    `,
+      [season],
+    );
+
+    res.status(200).json(keysToCamel(statResult));
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /published-schedule/date - returns all events occurring on a specific date
 publishedScheduleRouter.get('/dayId', async (req, res) => {
   try {
