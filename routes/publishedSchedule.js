@@ -220,36 +220,45 @@ publishedScheduleRouter.get('/season', async (req, res) => {
 // GET /published-schedule/stats - returns stats of event types and subjects for a specific season
 publishedScheduleRouter.get('/stats', async (req, res) => {
   try {
-    const { season } = req.query;
+    const { season, year } = req.query;
 
     const statResult = await db.query(
       `
-        WITH all_event_types AS (
-          SELECT DISTINCT unnest(event_type) AS event_type
-          FROM catalog
-      ),
-      all_subjects AS (
-          SELECT DISTINCT unnest(subject) AS subject
-          FROM catalog
-      )
-      SELECT 
-          COALESCE(aet.event_type::text, 'Total') AS event_type,
-          COALESCE(asu.subject::text, 'Total') AS subject,
-          COALESCE(COUNT(c.id), 0) AS total_count
-      FROM all_event_types aet
-      CROSS JOIN all_subjects asu
-      LEFT JOIN (
-          SELECT *
-          FROM catalog
-          WHERE $1 = ANY(season)
-      ) c ON aet.event_type = ANY(c.event_type) AND asu.subject = ANY(c.subject)
-      GROUP BY ROLLUP (aet.event_type), ROLLUP (asu.subject)
-      ORDER BY CASE WHEN aet.event_type IS NULL THEN 1 ELSE 0 END,
-              CASE WHEN asu.subject IS NULL THEN 1 ELSE 0 END,
-              aet.event_type NULLS FIRST,
-             asu.subject NULLS FIRST;    
+      WITH all_event_types AS (
+        SELECT DISTINCT unnest(event_type) AS event_type
+        FROM catalog
+    ),
+    all_subjects AS (
+        SELECT DISTINCT unnest(subject) AS subject
+        FROM catalog
+    ),
+    all_permutations AS (
+        SELECT aet.event_type, asu.subject
+        FROM all_event_types aet
+        CROSS JOIN all_subjects asu
+    )
+    SELECT 
+        COALESCE(ap.event_type::text, 'Total') AS event_type,
+        COALESCE(ap.subject::text, 'Total') AS subject,
+        COALESCE(COUNT(c.catalog_id), 0) AS total_count
+    FROM all_permutations ap
+    LEFT JOIN (
+        SELECT *,
+               ps.day_id AS ps_day_id,
+               c.id AS catalog_id
+        FROM catalog c
+        JOIN published_schedule ps ON c.id = ps.event_id
+        JOIN day d ON PS.day_id = d.id
+        WHERE $1 = ANY(c.season)
+            AND EXTRACT(YEAR FROM d.event_date) = $2
+    ) c ON ap.event_type = ANY(c.event_type) AND ap.subject = ANY(c.subject)
+    GROUP BY ROLLUP (ap.event_type), ROLLUP (ap.subject)
+    ORDER BY CASE WHEN ap.event_type IS NULL THEN 1 ELSE 0 END,
+             CASE WHEN ap.subject IS NULL THEN 1 ELSE 0 END,
+             ap.event_type NULLS FIRST,
+             ap.subject NULLS FIRST;
     `,
-      [season],
+      [season, year],
     );
 
     res.status(200).json(keysToCamel(statResult));
