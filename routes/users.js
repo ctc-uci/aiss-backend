@@ -17,9 +17,14 @@ userRouter.get('/', async (req, res) => {
 
 userRouter.get('/pending-accounts', async (req, res) => {
   try {
-    const pendingAccounts = await db.query(
-      `SELECT * FROM users WHERE approved = FALSE ORDER BY first_name ASC;`,
-    );
+    const { accountType } = req.query;
+    let queryString = 'SELECT * FROM users WHERE approved = FALSE ';
+    if (accountType === 'admin') {
+      queryString += `AND type = 'admin'`;
+    } else if (accountType === 'student') {
+      queryString += `AND type = 'student'`;
+    }
+    const pendingAccounts = await db.query(`${queryString} ORDER BY first_name ASC;`);
     res.status(200).json(keysToCamel(pendingAccounts));
   } catch (err) {
     res.status(500).send(err.message);
