@@ -45,11 +45,16 @@ userRouter.get('/approved-accounts', async (req, res) => {
       queryString += `AND type = 'student'`;
     }
     let approvedAccounts;
+    let userCount;
     let params = [];
     if (keyword) {
       params = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset];
       approvedAccounts = await db.query(
         `SELECT * ${queryString} AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4) ORDER BY first_name ASC LIMIT $5 OFFSET $6;`,
+        params,
+      );
+      userCount = await db.query(
+        `SELECT COUNT(*) ${queryString} AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4);`,
         params,
       );
     } else {
@@ -58,8 +63,8 @@ userRouter.get('/approved-accounts', async (req, res) => {
         `SELECT * ${queryString} ORDER BY first_name ASC LIMIT $1 OFFSET $2;`,
         params,
       );
+      userCount = await db.query(`SELECT COUNT(*) ${queryString};`, params);
     }
-    const userCount = await db.query(`SELECT COUNT(*) ${queryString};`, params);
     res.status(200).json(keysToCamel({ accounts: approvedAccounts, count: userCount }));
   } catch (err) {
     res.status(500).send(err.message);
