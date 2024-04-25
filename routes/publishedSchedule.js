@@ -165,6 +165,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
           C.event_type,
           C.year,
           C.description,
+          C.year,
           PS.start_time,
           PS.end_time,
           PS.confirmed,
