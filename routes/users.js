@@ -1,5 +1,5 @@
 const express = require('express');
-const { keysToCamel } = require('../common/utils');
+const { keysToCamel, isInteger } = require('../common/utils');
 const { db } = require('../server/db');
 
 const userRouter = express.Router();
@@ -17,9 +17,14 @@ userRouter.get('/', async (req, res) => {
 
 userRouter.get('/pending-accounts', async (req, res) => {
   try {
-    const pendingAccounts = await db.query(
-      `SELECT * FROM users WHERE approved = FALSE ORDER BY first_name ASC;`,
-    );
+    const { accountType } = req.query;
+    let queryString = 'SELECT * FROM users WHERE approved = FALSE ';
+    if (accountType === 'admin') {
+      queryString += `AND type = 'admin'`;
+    } else if (accountType === 'student') {
+      queryString += `AND type = 'student'`;
+    }
+    const pendingAccounts = await db.query(`${queryString} ORDER BY first_name ASC;`);
     res.status(200).json(keysToCamel(pendingAccounts));
   } catch (err) {
     res.status(500).send(err.message);
@@ -28,10 +33,39 @@ userRouter.get('/pending-accounts', async (req, res) => {
 
 userRouter.get('/approved-accounts', async (req, res) => {
   try {
-    const pendingAccounts = await db.query(
-      `SELECT * FROM users WHERE approved = TRUE ORDER BY first_name ASC;`,
-    );
-    res.status(200).json(keysToCamel(pendingAccounts));
+    const { keyword, accountType } = req.query;
+    let { page, limit } = req.query;
+    page = isInteger(page) ? parseInt(page, 10) : 1;
+    limit = isInteger(limit) ? parseInt(limit, 10) : 10;
+    const offset = (page - 1) * limit;
+    let queryString = 'FROM users WHERE approved = TRUE ';
+    if (accountType === 'admin') {
+      queryString += `AND type = 'admin'`;
+    } else if (accountType === 'student') {
+      queryString += `AND type = 'student'`;
+    }
+    let approvedAccounts;
+    let userCount;
+    let params = [];
+    if (keyword) {
+      params = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset];
+      approvedAccounts = await db.query(
+        `SELECT * ${queryString} AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4) ORDER BY first_name ASC LIMIT $5 OFFSET $6;`,
+        params,
+      );
+      userCount = await db.query(
+        `SELECT COUNT(*) ${queryString} AND (first_name ILIKE $1 OR last_name ILIKE $2 OR email ILIKE $3 OR CONCAT(first_name, ' ', last_name) ILIKE $4);`,
+        params,
+      );
+    } else {
+      params = [limit, offset];
+      approvedAccounts = await db.query(
+        `SELECT * ${queryString} ORDER BY first_name ASC LIMIT $1 OFFSET $2;`,
+        params,
+      );
+      userCount = await db.query(`SELECT COUNT(*) ${queryString};`, params);
+    }
+    res.status(200).json(keysToCamel({ accounts: approvedAccounts, count: userCount }));
   } catch (err) {
     res.status(500).send(err.message);
   }
