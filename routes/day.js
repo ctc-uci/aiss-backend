@@ -40,12 +40,25 @@ dayRouter.get('/:id', async (req, res) => {
 dayRouter.post('/', async (req, res) => {
   try {
     const { eventDate, location, notes } = req.body;
-    const inUse = await db.query(`SELECT * FROM day WHERE event_date = $1;`, [eventDate]);
-    if (inUse.length) {
-      res.status(201).json({
-        status: 'Failed',
-        message: 'Day already exists',
-      });
+    const existingDay = await db.query(`SELECT * FROM day WHERE event_date = $1;`, [eventDate]);
+    if (existingDay.length) {
+      // day exists but has no events --> update location + notes return existing day_id
+      if (existingDay[0].day_count === 0) {
+        await db.query(`UPDATE day SET location = $1, notes = $2 WHERE id = $3;`, [
+          location,
+          notes,
+          existingDay[0].id,
+        ]);
+        res.status(201).json({
+          status: 'Success',
+          id: existingDay[0].id,
+        });
+      } else {
+        res.status(201).json({
+          status: 'Failed',
+          message: 'Day already exists',
+        });
+      }
       return;
     }
 
