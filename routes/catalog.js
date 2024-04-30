@@ -21,7 +21,9 @@ catalogRouter.get('/', async (req, res) => {
     const params = [];
 
     if (title) {
-      query += ' AND title ILIKE $1';
+      query += ' AND (title ILIKE $1';
+      query += ' OR host ILIKE $1';
+      query += ' OR description ILIKE $1) ';
       params.push(`%${title}%`);
     } else {
       params.push('');
