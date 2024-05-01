@@ -51,7 +51,7 @@ publishedScheduleRouter.get('/recently-added', async (req, res) => {
         PS.created_on
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE PS.created_on = PS.confirmed_on AND PS.created_on > current_date - 7 AND confirmed = true
+      WHERE PS.created_on > current_date - 7 AND confirmed = true
       ORDER BY created_on DESC;
       `,
     );
@@ -237,7 +237,7 @@ publishedScheduleRouter.get('/stats', async (req, res) => {
         FROM all_event_types aet
         CROSS JOIN all_subjects asu
     )
-    SELECT 
+    SELECT
         COALESCE(ap.event_type::text, 'Total') AS event_type,
         COALESCE(ap.subject::text, 'Total') AS subject,
         COALESCE(COUNT(c.catalog_id), 0) AS total_count
@@ -406,7 +406,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
         eventId,
         dayId,
         confirmed,
-        new Date(),
+        null,
         startTime,
         endTime,
         calculateYear(eventDate, cohort),
