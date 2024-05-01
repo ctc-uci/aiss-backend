@@ -110,4 +110,20 @@ const getSeasonFromMonthAndYear = (month, year) => {
   return `Fall ${year}`;
 };
 
-module.exports = { keysToCamel, isInteger, calculateYear, getSeasonFromMonthAndYear };
+const getMonthRangeFromSeason = (season) => {
+  if (season === 'spring') {
+    return [0, 4];
+  }
+  if (season === 'summer') {
+    return [5, 7];
+  }
+  return [8, 12];
+};
+
+module.exports = {
+  keysToCamel,
+  isInteger,
+  calculateYear,
+  getSeasonFromMonthAndYear,
+  getMonthRangeFromSeason,
+};
