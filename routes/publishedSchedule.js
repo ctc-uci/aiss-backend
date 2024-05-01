@@ -1,6 +1,11 @@
 const express = require('express');
 const { db } = require('../server/db');
-const { keysToCamel, calculateYear, getSeasonFromMonthAndYear } = require('../common/utils');
+const {
+  keysToCamel,
+  calculateYear,
+  getSeasonFromMonthAndYear,
+  getMonthRangeFromSeason,
+} = require('../common/utils');
 
 const publishedScheduleRouter = express.Router();
 
@@ -51,7 +56,7 @@ publishedScheduleRouter.get('/recently-added', async (req, res) => {
         PS.created_on
       FROM published_schedule PS
       LEFT JOIN catalog C ON PS.event_id = C.id
-      WHERE PS.created_on = PS.confirmed_on AND PS.created_on > current_date - 7 AND confirmed = true
+      WHERE PS.created_on > current_date - 7 AND confirmed = true
       ORDER BY created_on DESC;
       `,
     );
@@ -221,6 +226,7 @@ publishedScheduleRouter.get('/season', async (req, res) => {
 publishedScheduleRouter.get('/stats', async (req, res) => {
   try {
     const { season, year } = req.query;
+    const [monthStart, monthEnd] = getMonthRangeFromSeason(season);
 
     const statResult = await db.query(
       `
@@ -237,7 +243,7 @@ publishedScheduleRouter.get('/stats', async (req, res) => {
         FROM all_event_types aet
         CROSS JOIN all_subjects asu
     )
-    SELECT 
+    SELECT
         COALESCE(ap.event_type::text, 'Total') AS event_type,
         COALESCE(ap.subject::text, 'Total') AS subject,
         COALESCE(COUNT(c.catalog_id), 0) AS total_count
@@ -249,8 +255,9 @@ publishedScheduleRouter.get('/stats', async (req, res) => {
         FROM catalog c
         JOIN published_schedule ps ON c.id = ps.event_id
         JOIN day d ON PS.day_id = d.id
-        WHERE $1 = ANY(c.season)
-            AND EXTRACT(YEAR FROM d.event_date) = $2
+        WHERE EXTRACT(MONTH FROM d.event_date) >= $1
+              AND EXTRACT(MONTH FROM d.event_date) <= $2
+            AND EXTRACT(YEAR FROM d.event_date) = $3
     ) c ON ap.event_type = ANY(c.event_type) AND ap.subject = ANY(c.subject)
     GROUP BY ROLLUP (ap.event_type), ROLLUP (ap.subject)
     ORDER BY CASE WHEN ap.event_type IS NULL THEN 1 ELSE 0 END,
@@ -258,7 +265,7 @@ publishedScheduleRouter.get('/stats', async (req, res) => {
              ap.event_type NULLS FIRST,
              ap.subject NULLS FIRST;
     `,
-      [season, year],
+      [monthStart, monthEnd, year],
     );
 
     res.status(200).json(keysToCamel(statResult));
@@ -406,7 +413,7 @@ publishedScheduleRouter.post('/', async (req, res) => {
         eventId,
         dayId,
         confirmed,
-        new Date(),
+        null,
         startTime,
         endTime,
         calculateYear(eventDate, cohort),

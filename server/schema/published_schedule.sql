@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS published_schedule (
     event_id integer NOT NULL,
     day_id integer NOT NULL,
     confirmed boolean NOT NULL,
-    confirmed_on date NOT NULL,
+    confirmed_on date,
     start_time time NOT NULL,
     end_time time NOT NULL,
     cohort varchar[] NOT NULL,
