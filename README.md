@@ -1,5 +1,6 @@
-# npo-backend-template
-This template will be used to create all NPO backend repos
+# Achievement Institute for STEM Scholars backend
+
+This is the backend for the Achievement Institute for STEM Scholars backend
 
 ## Setting up development environment
 
