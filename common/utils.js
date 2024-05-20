@@ -20,6 +20,44 @@ const isISODate = (str) => {
   }
 };
 
+// dependency for catalog.js
+const isInteger = (value) => {
+  return value && /^\d+$/.test(value);
+};
+
+// dependency for publishedSchedule.js
+const calculateYear = (eventDate, gradeLevel) => {
+  const currentDay = new Date(eventDate);
+  if (gradeLevel && gradeLevel.length === 1) {
+    // console.log('current day', currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1));
+    if (gradeLevel[0].toLowerCase() === 'junior') {
+      // if the current month is august or later
+      // then junior will be current year + 2
+      // otherwise junior will be current year + 1
+      // months are zero indexed
+      return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10)];
+    }
+    if (gradeLevel[0].toLowerCase() === 'senior') {
+      // if the current month is august or later
+      // then senior will be current year + 1
+      // otherwise senior will be current year
+      return [(currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10)];
+    }
+    if (gradeLevel[0].toLowerCase() === 'both') {
+      return [
+        (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
+        (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
+      ];
+    }
+  } else if (gradeLevel && gradeLevel.length > 1) {
+    return [
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 1 : 0)).toString(10),
+      (currentDay.getFullYear() + (currentDay.getMonth() >= 7 ? 2 : 1)).toString(10),
+    ];
+  }
+  return [];
+};
+
 const isObject = (o) => {
   return o === Object(o) && !isArray(o) && typeof o !== 'function' && !isISODate(o);
 };
@@ -34,7 +72,8 @@ const keysToCamel = (data) => {
     });
     return newData;
   }
-  if (isArray(data)) {
+  if (isArray(data) && data.length) {
+    // console.log(data)
     return data.map((i) => {
       return keysToCamel(i);
     });
@@ -45,11 +84,46 @@ const keysToCamel = (data) => {
     data[0] === '{' &&
     data[data.length - 1] === '}'
   ) {
-    let parsedList = data.replaceAll('"', '');
-    parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
-    return parsedList;
+    if (data.length > 2) {
+      let parsedList = data.replaceAll('"', '');
+      parsedList = parsedList.slice(1, parsedList.length - 1).split(',');
+      return parsedList;
+    }
+    return [];
   }
   return data;
 };
 
-module.exports = { keysToCamel };
+const getSeasonFromMonthAndYear = (month, year) => {
+  // spring
+  // march-may -> winter [year]
+  if (month >= 0 && month <= 4) {
+    return `Spring ${year}`;
+  }
+  // summer
+  // june-august -> summer [year]
+  if (month >= 5 && month <= 7) {
+    return `Summer ${year}`;
+  }
+  // fall
+  // september-november -> fall [year]
+  return `Fall ${year}`;
+};
+
+const getMonthRangeFromSeason = (season) => {
+  if (season === 'spring') {
+    return [0, 4];
+  }
+  if (season === 'summer') {
+    return [5, 7];
+  }
+  return [8, 12];
+};
+
+module.exports = {
+  keysToCamel,
+  isInteger,
+  calculateYear,
+  getSeasonFromMonthAndYear,
+  getMonthRangeFromSeason,
+};
