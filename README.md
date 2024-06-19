@@ -1,6 +1,6 @@
-# Achievement Institute for STEM Scholars backend
+# Achievement Institute for STEM Scholars Backend
 
-This is the backend for the Achievement Institute for STEM Scholars backend
+This is the backend for the Achievement Institute for STEM Scholars project.
 
 ## Setting up development environment
 
